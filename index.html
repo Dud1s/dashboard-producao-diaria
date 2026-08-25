@@ -27,9 +27,6 @@
   --kpi-bg:    #ffffff;
   --kpi-border: #e2e8f0;
   --tooltip-bg:#0f172a; --tooltip-fg:#ffffff;
-  --turno1:    #fca5a5;
-  --turno2:    #dc2626;
-  --turno3:    #7f1d1d;
 }
 
 [data-theme="dark"]{
@@ -49,9 +46,6 @@
   --kpi-bg:    #121826;
   --kpi-border: rgba(255,255,255,0.08);
   --tooltip-bg:#f1f5f9; --tooltip-fg:#0f172a;
-  --turno1:    #f87171;
-  --turno2:    #dc2626;
-  --turno3:    #7f1d1d;
 }
 
 body{
@@ -71,10 +65,6 @@ body{
 }
 .header h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
 .header h1 span{color:var(--accent);}
-.header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.upload-status{font-size:.78rem;color:var(--text-sub)}
-.upload-status.ok{color:var(--accent)}
-.upload-status.err{color:#b91c1c}
 
 /* Theme toggle */
 .theme-btn{
@@ -183,6 +173,11 @@ body{
   font-size:1.02rem;font-weight:700;margin-bottom:16px;
   display:flex;align-items:center;gap:8px;color:var(--text);
 }
+.subcard-title{
+  font-size:.9rem;font-weight:700;margin-bottom:12px;color:var(--text-sub);
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.kpi-highlight{border:2px solid var(--accent) !important;background:var(--accent-light) !important}
 
 /* ── Tab buttons ── */
 .tabs{display:flex;gap:6px;margin-bottom:18px}
@@ -209,24 +204,6 @@ body{
   cursor:pointer;min-height:2px;
 }
 .bar:hover{opacity:.85;transform:scaleX(1.05)}
-
-/* Barra empilhada por turno */
-.bar-stack{
-  width:100%;max-width:48px;display:flex;flex-direction:column-reverse;
-  border-radius:6px 6px 2px 2px;overflow:hidden;cursor:pointer;min-height:2px;
-}
-.bar-stack:hover{opacity:.85;transform:scaleX(1.05)}
-.bar-seg{width:100%;transition:height .4s cubic-bezier(.4,0,.2,1);min-height:0}
-.bar-seg.t1{background:var(--turno1)}
-.bar-seg.t2{background:var(--turno2)}
-.bar-seg.t3{background:var(--turno3)}
-
-.turno-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:.78rem;color:var(--text-sub)}
-.turno-legend-item{display:flex;align-items:center;gap:6px}
-.turno-legend-swatch{width:12px;height:12px;border-radius:3px;display:inline-block}
-.turno-legend-swatch.t1{background:var(--turno1)}
-.turno-legend-swatch.t2{background:var(--turno2)}
-.turno-legend-swatch.t3{background:var(--turno3)}
 .bar-label{
   font-size:.68rem;color:var(--text-sub);margin-top:6px;
   text-align:center;word-break:break-word;white-space:nowrap;
@@ -255,6 +232,7 @@ body{
 
 /* ── Grid layouts ── */
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
 
 /* ── Ranking Table ── */
 .rank-table{width:100%;border-collapse:collapse}
@@ -283,6 +261,7 @@ body{
 /* ── Responsive ── */
 @media(max-width:900px){
   .grid-3{grid-template-columns:1fr}
+  .grid-2{grid-template-columns:1fr}
   .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 }
 @media(max-width:600px){
@@ -338,33 +317,21 @@ body{
   <!-- Header -->
   <div class="header">
     <h1>Dashboard <span>Produção Diária</span></h1>
-    <div class="header-actions">
-      <span class="upload-status" id="uploadStatus"></span>
-      <input type="file" id="xlsxUpload" accept=".xlsx,.xls" style="display:none" onchange="handleXlsxUpload(event)">
-      <button class="theme-btn" id="uploadBtn" onclick="document.getElementById('xlsxUpload').click()">
-        <span class="theme-icon">📁</span>
-        <span>Carregar XLSX</span>
-      </button>
-      <button class="theme-btn" id="atualizarBtn" onclick="atualizarDashboard()" disabled style="opacity:.5;cursor:not-allowed">
-        <span class="theme-icon">🔄</span>
-        <span>Atualizar</span>
-      </button>
-      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
-        <span class="theme-icon" id="themeIcon">🌙</span>
-        <span id="themeLabel">Escuro</span>
-      </button>
-    </div>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <span class="theme-icon" id="themeIcon">🌙</span>
+      <span id="themeLabel">Escuro</span>
+    </button>
   </div>
 
   <!-- Top Filter Bar -->
   <div class="filter-bar">
     <div class="filter-group">
       <label>De:</label>
-      <input type="date" id="filtroInicio" value="2026-07-04" onchange="aplicarFiltros()">
+      <input type="date" id="filtroInicio" value="2026-06-05" onchange="aplicarFiltros()">
     </div>
     <div class="filter-group">
       <label>Até:</label>
-      <input type="date" id="filtroFim" value="2026-08-20" onchange="aplicarFiltros()">
+      <input type="date" id="filtroFim" value="2026-08-24" onchange="aplicarFiltros()">
     </div>
 
     <!-- Dropdown: Tipo de Produto -->
@@ -441,7 +408,6 @@ body{
       <button class="tab-btn" data-tab="semanal" onclick="setTab(this,'periodo')">Semanal</button>
       <button class="tab-btn" data-tab="mensal" onclick="setTab(this,'periodo')">Mensal</button>
     </div>
-    <div class="turno-legend" id="legendaPeriodo"></div>
     <div id="chartPeriodo" class="chart-container"></div>
   </div>
 
@@ -461,18 +427,28 @@ body{
     </div>
   </div>
 
-  <!-- Ranking -->
+  <!-- Indicadores de Refugo -->
   <div class="card">
-    <div class="card-title">Ranking de Máquinas</div>
-    <div id="rankingTable"></div>
+    <div class="card-title">Indicadores de Refugo</div>
+    <div class="kpi-grid" id="kpiRefugoGrid" style="margin-bottom:24px"></div>
+    <div class="grid-2">
+      <div>
+        <div class="subcard-title">Ranking de Causas de Refugo</div>
+        <div id="chartCausasRefugo" class="chart-container"></div>
+      </div>
+      <div>
+        <div class="subcard-title">Itens com Mais Refugo</div>
+        <div id="chartItensRefugo" class="chart-container"></div>
+      </div>
+    </div>
   </div>
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ═══════════════════════ DATA & CATEGORIZATION ═══════════════════════
-let DADOS_BRUTOS = [{"CT": "injetora 1", "DATA": "2026-08-12", "CODIGO": 10400634, "QUANTIDADE PRODUZIDA": 576, "TURNO": "3°"}, {"CT": "injetora 1", "DATA": "2026-08-13", "CODIGO": 10401112, "QUANTIDADE PRODUZIDA": 24, "TURNO": "2°"}, {"CT": "injetora 1", "DATA": "2026-08-13", "CODIGO": 10401089, "QUANTIDADE PRODUZIDA": 22, "TURNO": "2°"}, {"CT": "injetora 1", "DATA": "2026-08-14", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 215, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-14", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 1211, "TURNO": "2°"}, {"CT": "injetora 1", "DATA": "2026-08-14", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 1", "DATA": "2026-08-15", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 1166, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-15", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 408, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-12", "CODIGO": 10400324, "QUANTIDADE PRODUZIDA": 283, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400324, "QUANTIDADE PRODUZIDA": 497, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400372, "QUANTIDADE PRODUZIDA": 22, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400026, "QUANTIDADE PRODUZIDA": 96, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400026, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 36, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400372, "QUANTIDADE PRODUZIDA": 498, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 12, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400003, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400501, "QUANTIDADE PRODUZIDA": 48, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-15", "CODIGO": 10400712, "QUANTIDADE PRODUZIDA": 88, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-15", "CODIGO": 10400712, "QUANTIDADE PRODUZIDA": 112, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-17", "CODIGO": 10400042, "QUANTIDADE PRODUZIDA": 130, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 69, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 221, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400925, "QUANTIDADE PRODUZIDA": 18, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-14", "CODIGO": 10400466, "QUANTIDADE PRODUZIDA": 163, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-14", "CODIGO": 10400466, "QUANTIDADE PRODUZIDA": 58, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-12", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 192, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-13", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-13", "CODIGO": 10400034, "QUANTIDADE PRODUZIDA": 114, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-13", "CODIGO": 10400034, "QUANTIDADE PRODUZIDA": 206, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-14", "CODIGO": 10400391, "QUANTIDADE PRODUZIDA": 202, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-15", "CODIGO": 10400391, "QUANTIDADE PRODUZIDA": 280, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-17", "CODIGO": 10400915, "QUANTIDADE PRODUZIDA": 364, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400970, "QUANTIDADE PRODUZIDA": 80, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10401081, "QUANTIDADE PRODUZIDA": 100, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400927, "QUANTIDADE PRODUZIDA": 70, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-13", "CODIGO": 10400385, "QUANTIDADE PRODUZIDA": 288, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-15", "CODIGO": 10400385, "QUANTIDADE PRODUZIDA": 192, "TURNO": "2°"}, {"CT": "retrabalho", "DATA": "2026-08-20", "CODIGO": 10400990, "QUANTIDADE PRODUZIDA": 108, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-17", "CODIGO": 10400275, "QUANTIDADE PRODUZIDA": 37, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400275, "QUANTIDADE PRODUZIDA": 283, "TURNO": "1°"}, {"CT": "sopro 2", "DATA": "2026-08-19", "CODIGO": 10300019, "QUANTIDADE PRODUZIDA": 504, "TURNO": "1°"}, {"CT": "sopro 2", "DATA": "2026-08-07", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 455, "TURNO": "1°"}, {"CT": "sopro 2", "DATA": "2026-08-14", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 67, "TURNO": "1°"}, {"CT": "sopro 2", "DATA": "2026-08-14", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 761, "TURNO": "2°"}, {"CT": "sopro 2", "DATA": "2026-08-14", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 395, "TURNO": "3°"}, {"CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400662, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "sopro 1", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 558, "TURNO": "1°"}, {"CT": "sopro 1", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 842, "TURNO": "1°"}, {"CT": "sopro 1", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 975, "TURNO": "2°"}, {"CT": "sopro 1", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 625, "TURNO": "3°"}, {"CT": "sopro 1", "DATA": "2026-08-04", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 744, "TURNO": "3°"}, {"CT": "sopro 1", "DATA": "2026-08-05", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 911, "TURNO": "1°"}, {"CT": "sopro 1", "DATA": "2026-08-05", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 352, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-03", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 276, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-03", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 222, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-03", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 834, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-04", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 912, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-04", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 903, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-05", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 309, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-06", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 932, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-06", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1034, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-06", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 862, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-07", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1039, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-07", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1219, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-07", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1008, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-08", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 456, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10400402, "QUANTIDADE PRODUZIDA": 96, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-19", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 36, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 19, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400940, "QUANTIDADE PRODUZIDA": 31, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 7, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-19", "CODIGO": 10401120, "QUANTIDADE PRODUZIDA": 228, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 22, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 140, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-19", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 798, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-17", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 60, "TURNO": "2°"}, {"CT": "retrabalho", "DATA": "2026-08-19", "CODIGO": 10400661, "QUANTIDADE PRODUZIDA": 228, "TURNO": "1°"}, {"CT": "retrabalho", "DATA": "2026-08-20", "CODIGO": 10400661, "QUANTIDADE PRODUZIDA": 122, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300058, "QUANTIDADE PRODUZIDA": 390, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300058, "QUANTIDADE PRODUZIDA": 774, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300058, "QUANTIDADE PRODUZIDA": 832, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 854, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 315, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 573, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300332, "QUANTIDADE PRODUZIDA": 1022, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-02", "CODIGO": 10300077, "QUANTIDADE PRODUZIDA": 258, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-03", "CODIGO": 10300077, "QUANTIDADE PRODUZIDA": 744, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 120, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 840, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-02", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 45, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300352, "QUANTIDADE PRODUZIDA": 728, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-07-19", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 360, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-07-30", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-07-30", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 570, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-07-30", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 875, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-07-31", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 780, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-07-31", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 821, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 160, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-03", "CODIGO": 10300072, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-03", "CODIGO": 10300072, "QUANTIDADE PRODUZIDA": 653, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300072, "QUANTIDADE PRODUZIDA": 79, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 477, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 800, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 360, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 440, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 296, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 590, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 370, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 212, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-08", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 80, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-08", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 378, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300311, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300311, "QUANTIDADE PRODUZIDA": 258, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 682, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 511, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 560, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-15", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 1608, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-15", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 539, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-16", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 318, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 456, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 654, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-18", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 946, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-08", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 319, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 255, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-18", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 214, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-18", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 1022, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-19", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 251, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-19", "CODIGO": 10300019, "QUANTIDADE PRODUZIDA": 504, "TURNO": "2°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10300399, "QUANTIDADE PRODUZIDA": 66, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10401088, "QUANTIDADE PRODUZIDA": 21, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10401102, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-18", "CODIGO": 10400873, "QUANTIDADE PRODUZIDA": 760, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-19", "CODIGO": 10400873, "QUANTIDADE PRODUZIDA": 830, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-19", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 80, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-19", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 620, "TURNO": "2°"}, {"CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10400052, "QUANTIDADE PRODUZIDA": 56, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10400147, "QUANTIDADE PRODUZIDA": 1000, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 11052, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 4292, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 708, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 854, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 1390, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-11", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 5341, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-11", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 2979, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-11", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 5164, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-12", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-13", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 5361, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-13", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 4075, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 556, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 1864, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-12", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 74, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-13", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 1704, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-10", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 444, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-10", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 941, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 202, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 418, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-19", "CODIGO": 10400925, "QUANTIDADE PRODUZIDA": 51, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400925, "QUANTIDADE PRODUZIDA": 0, "TURNO": "2°"}, {"CT": "montagem", "DATA": "2026-08-10", "CODIGO": 10400027, "QUANTIDADE PRODUZIDA": 5, "TURNO": "3°"}, {"CT": "injetora 3", "DATA": "2026-08-08", "CODIGO": 10400781, "QUANTIDADE PRODUZIDA": 23, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-17", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-08", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 108, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-08", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 92, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-18", "CODIGO": 10400781, "QUANTIDADE PRODUZIDA": 16, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 338, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 343, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400440, "QUANTIDADE PRODUZIDA": 72, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400440, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 5", "DATA": "2026-08-15", "CODIGO": 10400440, "QUANTIDADE PRODUZIDA": 368, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-06", "CODIGO": 10400211, "QUANTIDADE PRODUZIDA": 71, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-06", "CODIGO": 10400211, "QUANTIDADE PRODUZIDA": 96, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400280, "QUANTIDADE PRODUZIDA": 266, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400086, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-06", "CODIGO": 10401106, "QUANTIDADE PRODUZIDA": 27, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-04", "CODIGO": 10400469, "QUANTIDADE PRODUZIDA": 538, "TURNO": "3°"}, {"CT": "injetora 5", "DATA": "2026-08-05", "CODIGO": 10400469, "QUANTIDADE PRODUZIDA": 260, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-04", "CODIGO": 10401078, "QUANTIDADE PRODUZIDA": 100, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-03", "CODIGO": 10400315, "QUANTIDADE PRODUZIDA": 191, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-03", "CODIGO": 10400281, "QUANTIDADE PRODUZIDA": 86, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-28", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 240, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-18", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 705, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-07-29", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 715, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-29", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 273, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-07-31", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 359, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-31", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 436, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-01", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 646, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 70, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 122, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 47, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400989, "QUANTIDADE PRODUZIDA": 152, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-19", "CODIGO": 10400989, "QUANTIDADE PRODUZIDA": 32, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-20", "CODIGO": 10400015, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10400322, "QUANTIDADE PRODUZIDA": 57, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-19", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 225, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-19", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-20", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 156, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-19", "CODIGO": 10401121, "QUANTIDADE PRODUZIDA": 60, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 153, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-09", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 135, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10401100, "QUANTIDADE PRODUZIDA": 39, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-07", "CODIGO": 10400971, "QUANTIDADE PRODUZIDA": 12, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 102, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400727, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400727, "QUANTIDADE PRODUZIDA": 57, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400004, "QUANTIDADE PRODUZIDA": 552, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-05", "CODIGO": 10401083, "QUANTIDADE PRODUZIDA": 65, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-05", "CODIGO": 10400039, "QUANTIDADE PRODUZIDA": 210, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-07-31", "CODIGO": 10400013, "QUANTIDADE PRODUZIDA": 539, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-03", "CODIGO": 10400013, "QUANTIDADE PRODUZIDA": 71, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-05", "CODIGO": 10400726, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400726, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-14", "CODIGO": 10300391, "QUANTIDADE PRODUZIDA": 202, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-15", "CODIGO": 10300391, "QUANTIDADE PRODUZIDA": 280, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-09", "CODIGO": 10401043, "QUANTIDADE PRODUZIDA": 18, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10401043, "QUANTIDADE PRODUZIDA": 123, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 192, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10400004, "QUANTIDADE PRODUZIDA": 240, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10400004, "QUANTIDADE PRODUZIDA": 294, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300874, "QUANTIDADE PRODUZIDA": 0, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300874, "QUANTIDADE PRODUZIDA": 594, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-18", "CODIGO": 10300874, "QUANTIDADE PRODUZIDA": 996, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-18", "CODIGO": 10300903, "QUANTIDADE PRODUZIDA": 495, "TURNO": "1°"}, {"CT": "injetora 8", "DATA": "2026-08-18", "CODIGO": 10300903, "QUANTIDADE PRODUZIDA": 2550, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300866, "QUANTIDADE PRODUZIDA": 280, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300866, "QUANTIDADE PRODUZIDA": 3701, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-13", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 1203, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-16", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 810, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-15", "CODIGO": 10300395, "QUANTIDADE PRODUZIDA": 960, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-16", "CODIGO": 10300395, "QUANTIDADE PRODUZIDA": 840, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-17", "CODIGO": 10300395, "QUANTIDADE PRODUZIDA": 576, "TURNO": "1°"}, {"CT": "injetora 10", "DATA": "2026-08-08", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 2387, "TURNO": "1°"}, {"CT": "injetora 10", "DATA": "2026-08-08", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 6600, "TURNO": "2°"}, {"CT": "injetora 10", "DATA": "2026-08-09", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 2764, "TURNO": "3°"}, {"CT": "injetora 10", "DATA": "2026-08-13", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 2288, "TURNO": "1°"}, {"CT": "injetora 10", "DATA": "2026-08-13", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4546, "TURNO": "2°"}, {"CT": "injetora 10", "DATA": "2026-08-13", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 10", "DATA": "2026-08-14", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4574, "TURNO": "1°"}, {"CT": "injetora 10", "DATA": "2026-08-14", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4915, "TURNO": "2°"}, {"CT": "injetora 10", "DATA": "2026-08-14", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4551, "TURNO": "3°"}, {"CT": "injetora 10", "DATA": "2026-08-15", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 5085, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 534, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 600, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 920, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300180, "QUANTIDADE PRODUZIDA": 550, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300180, "QUANTIDADE PRODUZIDA": 562, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300180, "QUANTIDADE PRODUZIDA": 888, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-04", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 3476, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-04", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 9699, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-04", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 11747, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-05", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 9911, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-05", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 9578, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}];
+const DADOS_BRUTOS = [{"OP": null, "CT": "injetora 1", "DATA": "2026-08-12", "CODIGO": 10400634, "QUANTIDADE PRODUZIDA": 576, "TURNO": "3°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-13", "CODIGO": 10401112, "QUANTIDADE PRODUZIDA": 24, "TURNO": "2°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-13", "CODIGO": 10401089, "QUANTIDADE PRODUZIDA": 22, "TURNO": "2°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-14", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 215, "TURNO": "1°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-14", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 1211, "TURNO": "2°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-14", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-15", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 1166, "TURNO": "1°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-15", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 408, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-12", "CODIGO": 10400324, "QUANTIDADE PRODUZIDA": 283, "TURNO": "3°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400324, "QUANTIDADE PRODUZIDA": 497, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400372, "QUANTIDADE PRODUZIDA": 22, "TURNO": "3°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400026, "QUANTIDADE PRODUZIDA": 96, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400026, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 36, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400372, "QUANTIDADE PRODUZIDA": 498, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 12, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400003, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400501, "QUANTIDADE PRODUZIDA": 48, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-15", "CODIGO": 10400712, "QUANTIDADE PRODUZIDA": 88, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-15", "CODIGO": 10400712, "QUANTIDADE PRODUZIDA": 112, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-17", "CODIGO": 10400042, "QUANTIDADE PRODUZIDA": 130, "TURNO": "1°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 69, "TURNO": "1°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 221, "TURNO": "2°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400925, "QUANTIDADE PRODUZIDA": 18, "TURNO": "2°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-14", "CODIGO": 10400466, "QUANTIDADE PRODUZIDA": 163, "TURNO": "1°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-14", "CODIGO": 10400466, "QUANTIDADE PRODUZIDA": 58, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-12", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 192, "TURNO": "3°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-13", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-13", "CODIGO": 10400034, "QUANTIDADE PRODUZIDA": 114, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-13", "CODIGO": 10400034, "QUANTIDADE PRODUZIDA": 206, "TURNO": "2°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-14", "CODIGO": 10400391, "QUANTIDADE PRODUZIDA": 202, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-15", "CODIGO": 10400391, "QUANTIDADE PRODUZIDA": 280, "TURNO": "2°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-17", "CODIGO": 10400915, "QUANTIDADE PRODUZIDA": 364, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400970, "QUANTIDADE PRODUZIDA": 80, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10401081, "QUANTIDADE PRODUZIDA": 100, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400927, "QUANTIDADE PRODUZIDA": 70, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-13", "CODIGO": 10400385, "QUANTIDADE PRODUZIDA": 288, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-15", "CODIGO": 10400385, "QUANTIDADE PRODUZIDA": 192, "TURNO": "2°"}, {"OP": null, "CT": "retrabalho", "DATA": "2026-08-20", "CODIGO": 10400990, "QUANTIDADE PRODUZIDA": 108, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-17", "CODIGO": 10400275, "QUANTIDADE PRODUZIDA": 37, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400275, "QUANTIDADE PRODUZIDA": 283, "TURNO": "1°"}, {"OP": null, "CT": "sopro 2", "DATA": "2026-08-19", "CODIGO": 10300019, "QUANTIDADE PRODUZIDA": 504, "TURNO": "1°"}, {"OP": null, "CT": "sopro 2", "DATA": "2026-08-07", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 455, "TURNO": "1°"}, {"OP": null, "CT": "sopro 2", "DATA": "2026-08-14", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 67, "TURNO": "1°"}, {"OP": null, "CT": "sopro 2", "DATA": "2026-08-14", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 761, "TURNO": "2°"}, {"OP": null, "CT": "sopro 2", "DATA": "2026-08-14", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 395, "TURNO": "3°"}, {"OP": null, "CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400662, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"OP": null, "CT": "sopro 1", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 558, "TURNO": "1°"}, {"OP": null, "CT": "sopro 1", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 842, "TURNO": "1°"}, {"OP": null, "CT": "sopro 1", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 975, "TURNO": "2°"}, {"OP": null, "CT": "sopro 1", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 625, "TURNO": "3°"}, {"OP": null, "CT": "sopro 1", "DATA": "2026-08-04", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 744, "TURNO": "3°"}, {"OP": null, "CT": "sopro 1", "DATA": "2026-08-05", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 911, "TURNO": "1°"}, {"OP": null, "CT": "sopro 1", "DATA": "2026-08-05", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 352, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-03", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 276, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-03", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 222, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-03", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 834, "TURNO": "3°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-04", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 912, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-04", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 903, "TURNO": "3°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-05", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 309, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-06", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 932, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-06", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1034, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-06", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 862, "TURNO": "3°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-07", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1039, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-07", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1219, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-07", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1008, "TURNO": "3°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-08", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 456, "TURNO": "1°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10400402, "QUANTIDADE PRODUZIDA": 96, "TURNO": "1°"}, {"OP": null, "CT": "montagem", "DATA": "2026-08-19", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 36, "TURNO": "1°"}, {"OP": null, "CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 19, "TURNO": "1°"}, {"OP": null, "CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400940, "QUANTIDADE PRODUZIDA": 31, "TURNO": "1°"}, {"OP": null, "CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 7, "TURNO": "1°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-19", "CODIGO": 10401120, "QUANTIDADE PRODUZIDA": 228, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 22, "TURNO": "2°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 140, "TURNO": "3°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-19", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 798, "TURNO": "1°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-17", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 60, "TURNO": "2°"}, {"OP": null, "CT": "retrabalho", "DATA": "2026-08-19", "CODIGO": 10400661, "QUANTIDADE PRODUZIDA": 228, "TURNO": "1°"}, {"OP": null, "CT": "retrabalho", "DATA": "2026-08-20", "CODIGO": 10400661, "QUANTIDADE PRODUZIDA": 122, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300058, "QUANTIDADE PRODUZIDA": 390, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300058, "QUANTIDADE PRODUZIDA": 774, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300058, "QUANTIDADE PRODUZIDA": 832, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 854, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 315, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 573, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300332, "QUANTIDADE PRODUZIDA": 1022, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-02", "CODIGO": 10300077, "QUANTIDADE PRODUZIDA": 258, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-03", "CODIGO": 10300077, "QUANTIDADE PRODUZIDA": 744, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 120, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 840, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-02", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 45, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300352, "QUANTIDADE PRODUZIDA": 728, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-07-19", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 360, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-07-30", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-07-30", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 570, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-07-30", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 875, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-07-31", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 780, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-07-31", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 821, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 160, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-03", "CODIGO": 10300072, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-03", "CODIGO": 10300072, "QUANTIDADE PRODUZIDA": 653, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300072, "QUANTIDADE PRODUZIDA": 79, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 477, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 800, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 360, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 440, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 296, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 590, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 370, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 212, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-08", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 80, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-08", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 378, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300311, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300311, "QUANTIDADE PRODUZIDA": 258, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 682, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 511, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 560, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-15", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 1608, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-15", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 539, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-16", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 318, "TURNO": "3°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 456, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 654, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-18", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 946, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-08", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 319, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 255, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-18", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 214, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-18", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 1022, "TURNO": "2°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-19", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 251, "TURNO": "1°"}, {"OP": null, "CT": "rebarbação", "DATA": "2026-08-19", "CODIGO": 10300019, "QUANTIDADE PRODUZIDA": 504, "TURNO": "2°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10300399, "QUANTIDADE PRODUZIDA": 66, "TURNO": "1°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10401088, "QUANTIDADE PRODUZIDA": 21, "TURNO": "1°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10401102, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-18", "CODIGO": 10400873, "QUANTIDADE PRODUZIDA": 760, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-19", "CODIGO": 10400873, "QUANTIDADE PRODUZIDA": 830, "TURNO": "1°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-19", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 80, "TURNO": "1°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-19", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 620, "TURNO": "2°"}, {"OP": null, "CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10400052, "QUANTIDADE PRODUZIDA": 56, "TURNO": "1°"}, {"OP": null, "CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10400147, "QUANTIDADE PRODUZIDA": 1000, "TURNO": "1°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 11052, "TURNO": "2°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 4292, "TURNO": "1°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 708, "TURNO": "2°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 854, "TURNO": "2°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 1390, "TURNO": "3°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-11", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 5341, "TURNO": "1°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-11", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 2979, "TURNO": "2°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-11", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 5164, "TURNO": "3°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-12", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-13", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 5361, "TURNO": "1°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-13", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 4075, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 556, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 1864, "TURNO": "3°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-12", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 74, "TURNO": "3°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-13", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 1704, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-10", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 444, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-10", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 941, "TURNO": "3°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 202, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 418, "TURNO": "2°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-19", "CODIGO": 10400925, "QUANTIDADE PRODUZIDA": 51, "TURNO": "1°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400925, "QUANTIDADE PRODUZIDA": 0, "TURNO": "2°"}, {"OP": null, "CT": "montagem", "DATA": "2026-08-10", "CODIGO": 10400027, "QUANTIDADE PRODUZIDA": 5, "TURNO": "3°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-08", "CODIGO": 10400781, "QUANTIDADE PRODUZIDA": 23, "TURNO": "2°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-17", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-08", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 108, "TURNO": "1°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-08", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 92, "TURNO": "2°"}, {"OP": null, "CT": "injetora 3", "DATA": "2026-08-18", "CODIGO": 10400781, "QUANTIDADE PRODUZIDA": 16, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 338, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 343, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400440, "QUANTIDADE PRODUZIDA": 72, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400440, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-15", "CODIGO": 10400440, "QUANTIDADE PRODUZIDA": 368, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-06", "CODIGO": 10400211, "QUANTIDADE PRODUZIDA": 71, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-06", "CODIGO": 10400211, "QUANTIDADE PRODUZIDA": 96, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400280, "QUANTIDADE PRODUZIDA": 266, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400086, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-06", "CODIGO": 10401106, "QUANTIDADE PRODUZIDA": 27, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-07-04", "CODIGO": 10400469, "QUANTIDADE PRODUZIDA": 538, "TURNO": "3°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-05", "CODIGO": 10400469, "QUANTIDADE PRODUZIDA": 260, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-04", "CODIGO": 10401078, "QUANTIDADE PRODUZIDA": 100, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-03", "CODIGO": 10400315, "QUANTIDADE PRODUZIDA": 191, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-03", "CODIGO": 10400281, "QUANTIDADE PRODUZIDA": 86, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-07-28", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 240, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-07-18", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 705, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-07-29", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 715, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-07-29", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 273, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-07-31", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 359, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-07-31", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 436, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-01", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 646, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 70, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 122, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 47, "TURNO": "2°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400989, "QUANTIDADE PRODUZIDA": 152, "TURNO": "1°"}, {"OP": null, "CT": "injetora 5", "DATA": "2026-08-19", "CODIGO": 10400989, "QUANTIDADE PRODUZIDA": 32, "TURNO": "1°"}, {"OP": null, "CT": "injetora 2", "DATA": "2026-08-20", "CODIGO": 10400015, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"OP": null, "CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10400322, "QUANTIDADE PRODUZIDA": 57, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-19", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 225, "TURNO": "2°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-19", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-20", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 156, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-19", "CODIGO": 10401121, "QUANTIDADE PRODUZIDA": 60, "TURNO": "2°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 153, "TURNO": "2°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-09", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 135, "TURNO": "3°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10401100, "QUANTIDADE PRODUZIDA": 39, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-07", "CODIGO": 10400971, "QUANTIDADE PRODUZIDA": 12, "TURNO": "2°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 102, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400727, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400727, "QUANTIDADE PRODUZIDA": 57, "TURNO": "3°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400004, "QUANTIDADE PRODUZIDA": 552, "TURNO": "3°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-05", "CODIGO": 10401083, "QUANTIDADE PRODUZIDA": 65, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-05", "CODIGO": 10400039, "QUANTIDADE PRODUZIDA": 210, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-07-31", "CODIGO": 10400013, "QUANTIDADE PRODUZIDA": 539, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-03", "CODIGO": 10400013, "QUANTIDADE PRODUZIDA": 71, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-05", "CODIGO": 10400726, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400726, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-14", "CODIGO": 10300391, "QUANTIDADE PRODUZIDA": 202, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-15", "CODIGO": 10300391, "QUANTIDADE PRODUZIDA": 280, "TURNO": "2°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-09", "CODIGO": 10401043, "QUANTIDADE PRODUZIDA": 18, "TURNO": "3°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10401043, "QUANTIDADE PRODUZIDA": 123, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 192, "TURNO": "1°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10400004, "QUANTIDADE PRODUZIDA": 240, "TURNO": "2°"}, {"OP": null, "CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10400004, "QUANTIDADE PRODUZIDA": 294, "TURNO": "3°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300874, "QUANTIDADE PRODUZIDA": 0, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300874, "QUANTIDADE PRODUZIDA": 594, "TURNO": "3°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-18", "CODIGO": 10300874, "QUANTIDADE PRODUZIDA": 996, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-18", "CODIGO": 10300903, "QUANTIDADE PRODUZIDA": 495, "TURNO": "1°"}, {"OP": null, "CT": "injetora 8", "DATA": "2026-08-18", "CODIGO": 10300903, "QUANTIDADE PRODUZIDA": 2550, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300866, "QUANTIDADE PRODUZIDA": 280, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300866, "QUANTIDADE PRODUZIDA": 3701, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-13", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 1203, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-16", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 810, "TURNO": "1°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-15", "CODIGO": 10300395, "QUANTIDADE PRODUZIDA": 960, "TURNO": "2°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-16", "CODIGO": 10300395, "QUANTIDADE PRODUZIDA": 840, "TURNO": "3°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-17", "CODIGO": 10300395, "QUANTIDADE PRODUZIDA": 576, "TURNO": "1°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-08", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 2387, "TURNO": "1°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-08", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 6600, "TURNO": "2°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-09", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 2764, "TURNO": "3°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-13", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 2288, "TURNO": "1°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-13", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4546, "TURNO": "2°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-13", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-14", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4574, "TURNO": "1°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-14", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4915, "TURNO": "2°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-14", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4551, "TURNO": "3°"}, {"OP": null, "CT": "injetora 10", "DATA": "2026-08-15", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 5085, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 534, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 600, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 920, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300180, "QUANTIDADE PRODUZIDA": 550, "TURNO": "1°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300180, "QUANTIDADE PRODUZIDA": 562, "TURNO": "2°"}, {"OP": null, "CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300180, "QUANTIDADE PRODUZIDA": 888, "TURNO": "1°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-04", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 3476, "TURNO": "1°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-04", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 9699, "TURNO": "2°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-04", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 11747, "TURNO": "3°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-05", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 9911, "TURNO": "1°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-05", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 9578, "TURNO": "2°"}, {"OP": null, "CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"OP": 54237, "CT": "injetora 5", "DATA": "2026-08-20", "CODIGO": 10300933, "QUANTIDADE PRODUZIDA": 412, "TURNO": "2°"}, {"OP": 54237, "CT": "injetora 5", "DATA": "2026-08-20", "CODIGO": 10300933, "QUANTIDADE PRODUZIDA": 636, "TURNO": "3°"}, {"OP": 54237, "CT": "injetora 5", "DATA": "2026-08-21", "CODIGO": 10300933, "QUANTIDADE PRODUZIDA": 642, "TURNO": "1°"}, {"OP": 54237, "CT": "injetora 5", "DATA": "2026-08-22", "CODIGO": 10300933, "QUANTIDADE PRODUZIDA": 47, "TURNO": "1°"}, {"OP": 54194, "CT": "injetora 2", "DATA": "2026-08-19", "CODIGO": 10400660, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"OP": 54194, "CT": "injetora 2", "DATA": "2026-08-19", "CODIGO": 10400660, "QUANTIDADE PRODUZIDA": 299, "TURNO": "3°"}, {"OP": 54149, "CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400713, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": 54149, "CT": "injetora 2", "DATA": "2026-08-19", "CODIGO": 10400713, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"OP": 53996, "CT": "injetora 2", "DATA": "2026-08-17", "CODIGO": 10400042, "QUANTIDADE PRODUZIDA": 130, "TURNO": "1°"}, {"OP": 54039, "CT": "injetora 2", "DATA": "2026-08-15", "CODIGO": 10400712, "QUANTIDADE PRODUZIDA": 88, "TURNO": "1°"}, {"OP": 54039, "CT": "injetora 2", "DATA": "2026-08-15", "CODIGO": 10400712, "QUANTIDADE PRODUZIDA": 112, "TURNO": "2°"}, {"OP": 53915, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400501, "QUANTIDADE PRODUZIDA": 48, "TURNO": "1°"}, {"OP": 53983, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400003, "QUANTIDADE PRODUZIDA": 0, "TURNO": "2°"}, {"OP": 53983, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400003, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": 53983, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400003, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"OP": 53981, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 12, "TURNO": "2°"}, {"OP": "OP-053982", "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 36, "TURNO": "2°"}, {"OP": 53840, "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400026, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"OP": 53840, "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400026, "QUANTIDADE PRODUZIDA": 96, "TURNO": "2°"}, {"OP": 53860, "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400372, "QUANTIDADE PRODUZIDA": 22, "TURNO": "3°"}, {"OP": 53860, "CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400372, "QUANTIDADE PRODUZIDA": 498, "TURNO": "2°"}, {"OP": 53828, "CT": "injetora 2", "DATA": "2026-08-12", "CODIGO": 10400324, "QUANTIDADE PRODUZIDA": 283, "TURNO": "3°"}, {"OP": 53828, "CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400324, "QUANTIDADE PRODUZIDA": 497, "TURNO": "1°"}, {"OP": 53799, "CT": "injetora 2", "DATA": "2026-08-10", "CODIGO": 10400036, "QUANTIDADE PRODUZIDA": 56, "TURNO": "2°"}, {"OP": 53799, "CT": "injetora 2", "DATA": "2026-08-10", "CODIGO": 10400036, "QUANTIDADE PRODUZIDA": 494, "TURNO": "3°"}, {"OP": 53796, "CT": "injetora 2", "DATA": "2026-08-10", "CODIGO": 10400635, "QUANTIDADE PRODUZIDA": 216, "TURNO": "1°"}, {"OP": 53796, "CT": "injetora 2", "DATA": "2026-08-10", "CODIGO": 10400635, "QUANTIDADE PRODUZIDA": 193, "TURNO": "2°"}, {"OP": 53789, "CT": "injetora 2", "DATA": "2026-08-10", "CODIGO": 10400634, "QUANTIDADE PRODUZIDA": 600, "TURNO": "1°"}, {"OP": 53786, "CT": "injetora 2", "DATA": "2026-08-08", "CODIGO": 10400667, "QUANTIDADE PRODUZIDA": 284, "TURNO": "2°"}, {"OP": 53781, "CT": "injetora 2", "DATA": "2026-08-08", "CODIGO": 10400668, "QUANTIDADE PRODUZIDA": 250, "TURNO": "1°"}, {"OP": 53781, "CT": "injetora 2", "DATA": "2026-08-08", "CODIGO": 10400668, "QUANTIDADE PRODUZIDA": 38, "TURNO": "2°"}, {"OP": 53332, "CT": "injetora 2", "DATA": "2026-07-01", "CODIGO": 10400639, "QUANTIDADE PRODUZIDA": 204, "TURNO": "1°"}, {"OP": 53997, "CT": "injetora 4", "DATA": "2026-08-17", "CODIGO": 10400364, "QUANTIDADE PRODUZIDA": 65, "TURNO": "2°"}, {"OP": 53997, "CT": "injetora 4", "DATA": "2026-08-17", "CODIGO": 10400364, "QUANTIDADE PRODUZIDA": 168, "TURNO": "3°"}, {"OP": 53997, "CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400364, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"OP": 53997, "CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400364, "QUANTIDADE PRODUZIDA": 16, "TURNO": "2°"}, {"OP": 54257, "CT": "injetora 2", "DATA": "2026-08-21", "CODIGO": 10400635, "QUANTIDADE PRODUZIDA": 604, "TURNO": "2°"}, {"OP": 54285, "CT": "injetora 2", "DATA": "2026-08-22", "CODIGO": 10400726, "QUANTIDADE PRODUZIDA": 153, "TURNO": "2°"}, {"OP": 54285, "CT": "injetora 2", "DATA": "2026-08-23", "CODIGO": 10400726, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"OP": 54285, "CT": "injetora 2", "DATA": "2026-08-24", "CODIGO": 10400726, "QUANTIDADE PRODUZIDA": 37, "TURNO": "1°"}, {"OP": 54021, "CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400940, "QUANTIDADE PRODUZIDA": 72, "TURNO": "1°"}, {"OP": 54021, "CT": "montagem", "DATA": "2026-08-21", "CODIGO": 10400940, "QUANTIDADE PRODUZIDA": 129, "TURNO": "1°"}, {"OP": 54037, "CT": "montagem", "DATA": "2026-08-14", "CODIGO": 10400942, "QUANTIDADE PRODUZIDA": 6, "TURNO": "1°"}, {"OP": 54027, "CT": "montagem", "DATA": "2026-08-18", "CODIGO": 10400132, "QUANTIDADE PRODUZIDA": 372, "TURNO": "1°"}, {"OP": 54027, "CT": "montagem", "DATA": "2026-08-19", "CODIGO": 10400132, "QUANTIDADE PRODUZIDA": 94, "TURNO": "1°"}, {"OP": 54027, "CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400132, "QUANTIDADE PRODUZIDA": 128, "TURNO": "1°"}, {"OP": 54198, "CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400932, "QUANTIDADE PRODUZIDA": 9, "TURNO": "1°"}, {"OP": 53848, "CT": "montagem", "DATA": "2026-08-14", "CODIGO": 10400413, "QUANTIDADE PRODUZIDA": 143, "TURNO": "1°"}, {"OP": 53847, "CT": "montagem", "DATA": "2026-07-14", "CODIGO": 10400412, "QUANTIDADE PRODUZIDA": 148, "TURNO": "1°"}, {"OP": 54269, "CT": "montagem", "DATA": "2026-08-22", "CODIGO": 10400367, "QUANTIDADE PRODUZIDA": 100, "TURNO": "1°"}, {"OP": 53771, "CT": "montagem", "DATA": "2026-08-14", "CODIGO": 10400415, "QUANTIDADE PRODUZIDA": 18, "TURNO": "1°"}, {"OP": 54227, "CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400687, "QUANTIDADE PRODUZIDA": 100, "TURNO": "2°"}, {"OP": 54156, "CT": "montagem", "DATA": "2026-08-19", "CODIGO": 10400937, "QUANTIDADE PRODUZIDA": 4, "TURNO": "1°"}, {"OP": 54024, "CT": "montagem", "DATA": "2026-08-18", "CODIGO": 10400939, "QUANTIDADE PRODUZIDA": 17, "TURNO": "1°"}, {"OP": 54158, "CT": "montagem", "DATA": "2026-08-19", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 4, "TURNO": "1°"}, {"OP": 54157, "CT": "montagem", "DATA": "2026-08-19", "CODIGO": 10400941, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"OP": 54023, "CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10400938, "QUANTIDADE PRODUZIDA": 13, "TURNO": "1°"}, {"OP": 53214, "CT": "montagem", "DATA": "2026-08-15", "CODIGO": 10400936, "QUANTIDADE PRODUZIDA": 105, "TURNO": "1°"}, {"OP": 53214, "CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10400936, "QUANTIDADE PRODUZIDA": 147, "TURNO": "1°"}, {"OP": 54032, "CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10401048, "QUANTIDADE PRODUZIDA": 6, "TURNO": "1°"}, {"OP": 54030, "CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10401053, "QUANTIDADE PRODUZIDA": 3, "TURNO": "1°"}, {"OP": 54029, "CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10401050, "QUANTIDADE PRODUZIDA": 3, "TURNO": "1°"}, {"OP": 53769, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10400111, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"OP": 53769, "CT": "montagem", "DATA": "2026-08-13", "CODIGO": 10400111, "QUANTIDADE PRODUZIDA": 115, "TURNO": "1°"}, {"OP": 54004, "CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10400052, "QUANTIDADE PRODUZIDA": 91, "TURNO": "1°"}, {"OP": 53912, "CT": "montagem", "DATA": "2026-08-14", "CODIGO": 10400941, "QUANTIDADE PRODUZIDA": 24, "TURNO": "1°"}, {"OP": 53792, "CT": "montagem", "DATA": "2026-08-10", "CODIGO": 10400412, "QUANTIDADE PRODUZIDA": 100, "TURNO": "1°"}, {"OP": 53784, "CT": "montagem", "DATA": "2026-08-10", "CODIGO": 10400413, "QUANTIDADE PRODUZIDA": 50, "TURNO": "1°"}, {"OP": 53362, "CT": "montagem", "DATA": "2026-07-31", "CODIGO": 10400044, "QUANTIDADE PRODUZIDA": 180, "TURNO": "1°"}, {"OP": 53362, "CT": "montagem", "DATA": "2026-08-01", "CODIGO": 10400044, "QUANTIDADE PRODUZIDA": 108, "TURNO": "1°"}, {"OP": 53362, "CT": "montagem", "DATA": "2026-08-10", "CODIGO": 10400044, "QUANTIDADE PRODUZIDA": 594, "TURNO": "3°"}, {"OP": 53362, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10400044, "QUANTIDADE PRODUZIDA": 839, "TURNO": "1°"}, {"OP": 53362, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10400044, "QUANTIDADE PRODUZIDA": 864, "TURNO": "3°"}, {"OP": 53362, "CT": "montagem", "DATA": "2026-08-12", "CODIGO": 10400044, "QUANTIDADE PRODUZIDA": 546, "TURNO": "3°"}, {"OP": 53768, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10400414, "QUANTIDADE PRODUZIDA": 50, "TURNO": "1°"}, {"OP": 53768, "CT": "montagem", "DATA": "2026-08-10", "CODIGO": 10400414, "QUANTIDADE PRODUZIDA": 50, "TURNO": "1°"}, {"OP": 53745, "CT": "montagem", "DATA": "2026-08-07", "CODIGO": 10400473, "QUANTIDADE PRODUZIDA": 14, "TURNO": "1°"}, {"OP": 53205, "CT": "montagem", "DATA": "2026-07-28", "CODIGO": 10400933, "QUANTIDADE PRODUZIDA": 16, "TURNO": "1°"}, {"OP": 53205, "CT": "montagem", "DATA": "2026-08-07", "CODIGO": 10400933, "QUANTIDADE PRODUZIDA": 29, "TURNO": "1°"}, {"OP": 53375, "CT": "montagem", "DATA": "2026-08-07", "CODIGO": 10400936, "QUANTIDADE PRODUZIDA": 71, "TURNO": "1°"}, {"OP": 53376, "CT": "montagem", "DATA": "2026-07-31", "CODIGO": 10400938, "QUANTIDADE PRODUZIDA": 10, "TURNO": "1°"}, {"OP": 53765, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10400148, "QUANTIDADE PRODUZIDA": 100, "TURNO": "1°"}, {"OP": 53772, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10400150, "QUANTIDADE PRODUZIDA": 100, "TURNO": "1°"}, {"OP": 53814, "CT": "montagem", "DATA": "2026-08-10", "CODIGO": 10400045, "QUANTIDADE PRODUZIDA": 60, "TURNO": "1°"}, {"OP": 53696, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10400287, "QUANTIDADE PRODUZIDA": 119, "TURNO": "1°"}, {"OP": 53696, "CT": "montagem", "DATA": "2026-08-07", "CODIGO": 10400287, "QUANTIDADE PRODUZIDA": 77, "TURNO": "1°"}, {"OP": 53704, "CT": "montagem", "DATA": "2026-08-07", "CODIGO": 10400111, "QUANTIDADE PRODUZIDA": 216, "TURNO": "1°"}, {"OP": 53702, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10400045, "QUANTIDADE PRODUZIDA": 300, "TURNO": "1°"}, {"OP": 53381, "CT": "montagem", "DATA": "2026-08-01", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 31, "TURNO": "1°"}, {"OP": 53614, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400931, "QUANTIDADE PRODUZIDA": 3, "TURNO": "1°"}, {"OP": 53597, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10401094, "QUANTIDADE PRODUZIDA": 95, "TURNO": "1°"}, {"OP": 53681, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400412, "QUANTIDADE PRODUZIDA": 5, "TURNO": "1°"}, {"OP": 53680, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10401093, "QUANTIDADE PRODUZIDA": 2, "TURNO": "1°"}, {"OP": 53611, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400052, "QUANTIDADE PRODUZIDA": 28, "TURNO": "1°"}, {"OP": 53613, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10401053, "QUANTIDADE PRODUZIDA": 6, "TURNO": "1°"}, {"OP": 53596, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10300323, "QUANTIDADE PRODUZIDA": 193, "TURNO": "1°"}, {"OP": 53616, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400930, "QUANTIDADE PRODUZIDA": 1, "TURNO": "1°"}, {"OP": 53608, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400415, "QUANTIDADE PRODUZIDA": 11, "TURNO": "1°"}, {"OP": 53600, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400414, "QUANTIDADE PRODUZIDA": 38, "TURNO": "1°"}, {"OP": 53606, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400474, "QUANTIDADE PRODUZIDA": 13, "TURNO": "1°"}, {"OP": 53599, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400412, "QUANTIDADE PRODUZIDA": 70, "TURNO": "1°"}, {"OP": 53663, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400052, "QUANTIDADE PRODUZIDA": 7, "TURNO": "1°"}, {"OP": 53605, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10401048, "QUANTIDADE PRODUZIDA": 16, "TURNO": "1°"}, {"OP": 53615, "CT": "montagem", "DATA": "2026-06-05", "CODIGO": 10401046, "QUANTIDADE PRODUZIDA": 2, "TURNO": "1°"}, {"OP": 53603, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10401044, "QUANTIDADE PRODUZIDA": 19, "TURNO": "1°"}, {"OP": 53602, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10401047, "QUANTIDADE PRODUZIDA": 32, "TURNO": "1°"}, {"OP": 53607, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400473, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"OP": 53534, "CT": "montagem", "DATA": "2026-08-03", "CODIGO": 10400415, "QUANTIDADE PRODUZIDA": 6, "TURNO": "1°"}, {"OP": 53575, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400931, "QUANTIDADE PRODUZIDA": 1, "TURNO": "1°"}, {"OP": 53576, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400111, "QUANTIDADE PRODUZIDA": 1, "TURNO": "1°"}, {"OP": 53215, "CT": "montagem", "DATA": "2026-08-03", "CODIGO": 10400942, "QUANTIDADE PRODUZIDA": 24, "TURNO": "1°"}, {"OP": 53215, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400942, "QUANTIDADE PRODUZIDA": 13, "TURNO": "1°"}, {"OP": 53527, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400930, "QUANTIDADE PRODUZIDA": 56, "TURNO": "1°"}, {"OP": 53574, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400148, "QUANTIDADE PRODUZIDA": 92, "TURNO": "1°"}, {"OP": 53589, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400938, "QUANTIDADE PRODUZIDA": 2, "TURNO": "1°"}, {"OP": 53588, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400084, "QUANTIDADE PRODUZIDA": 25, "TURNO": "1°"}, {"OP": 53501, "CT": "montagem", "DATA": "2026-08-01", "CODIGO": 10400081, "QUANTIDADE PRODUZIDA": 162, "TURNO": "1°"}, {"OP": 53501, "CT": "montagem", "DATA": "2026-08-03", "CODIGO": 10400081, "QUANTIDADE PRODUZIDA": 30, "TURNO": "1°"}, {"OP": 53383, "CT": "montagem", "DATA": "2026-07-30", "CODIGO": 10401094, "QUANTIDADE PRODUZIDA": 55, "TURNO": "1°"}, {"OP": 53352, "CT": "montagem", "DATA": "2026-07-29", "CODIGO": 10400044, "QUANTIDADE PRODUZIDA": 491, "TURNO": "1°"}, {"OP": 53352, "CT": "montagem", "DATA": "2026-07-31", "CODIGO": 10400044, "QUANTIDADE PRODUZIDA": 188, "TURNO": "1°"}, {"OP": 53570, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400150, "QUANTIDADE PRODUZIDA": 50, "TURNO": "1°"}, {"OP": 53590, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400052, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"OP": 53688, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10400287, "QUANTIDADE PRODUZIDA": 112, "TURNO": "1°"}, {"OP": 53690, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400287, "QUANTIDADE PRODUZIDA": 49, "TURNO": "1°"}, {"OP": 53689, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10400287, "QUANTIDADE PRODUZIDA": 82, "TURNO": "1°"}, {"OP": 53604, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10400287, "QUANTIDADE PRODUZIDA": 24, "TURNO": "1°"}, {"OP": 53369, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10400414, "QUANTIDADE PRODUZIDA": 48, "TURNO": "1°"}, {"OP": 53665, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10401046, "QUANTIDADE PRODUZIDA": 27, "TURNO": "1°"}, {"OP": 53691, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10400415, "QUANTIDADE PRODUZIDA": 6, "TURNO": "1°"}, {"OP": 53610, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10401050, "QUANTIDADE PRODUZIDA": 8, "TURNO": "1°"}, {"OP": 53684, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10400474, "QUANTIDADE PRODUZIDA": 6, "TURNO": "1°"}, {"OP": 53368, "CT": "montagem", "DATA": "2026-08-06", "CODIGO": 10400412, "QUANTIDADE PRODUZIDA": 69, "TURNO": "1°"}, {"OP": 53774, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10400472, "QUANTIDADE PRODUZIDA": 37, "TURNO": "1°"}, {"OP": 53764, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10401044, "QUANTIDADE PRODUZIDA": 34, "TURNO": "1°"}, {"OP": 53773, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10400474, "QUANTIDADE PRODUZIDA": 38, "TURNO": "1°"}, {"OP": 53776, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10401045, "QUANTIDADE PRODUZIDA": 90, "TURNO": "1°"}, {"OP": 53819, "CT": "montagem", "DATA": "2026-08-13", "CODIGO": 10400930, "QUANTIDADE PRODUZIDA": 104, "TURNO": "1°"}, {"OP": 53777, "CT": "montagem", "DATA": "2026-08-11", "CODIGO": 10401046, "QUANTIDADE PRODUZIDA": 71, "TURNO": "1°"}, {"OP": 53380, "CT": "montagem", "DATA": "2026-08-07", "CODIGO": 10400942, "QUANTIDADE PRODUZIDA": 114, "TURNO": "1°"}, {"OP": 53379, "CT": "montagem", "DATA": "2026-08-04", "CODIGO": 10400941, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"OP": 53379, "CT": "montagem", "DATA": "2026-08-05", "CODIGO": 10400941, "QUANTIDADE PRODUZIDA": 14, "TURNO": "1°"}, {"OP": 53775, "CT": "montagem", "DATA": "2026-08-15", "CODIGO": 10401047, "QUANTIDADE PRODUZIDA": 26, "TURNO": "1°"}, {"OP": 54005, "CT": "montagem", "DATA": "2026-08-15", "CODIGO": 10401093, "QUANTIDADE PRODUZIDA": 22, "TURNO": "1°"}, {"OP": 54031, "CT": "montagem", "DATA": "2026-08-15", "CODIGO": 10400367, "QUANTIDADE PRODUZIDA": 72, "TURNO": "1°"}, {"OP": 54008, "CT": "montagem", "DATA": "2026-08-15", "CODIGO": 10400150, "QUANTIDADE PRODUZIDA": 180, "TURNO": "1°"}, {"OP": 54025, "CT": "montagem", "DATA": "2026-08-18", "CODIGO": 10400941, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"OP": 53913, "CT": "montagem", "DATA": "2026-08-01", "CODIGO": 10400937, "QUANTIDADE PRODUZIDA": 22, "TURNO": "1°"}, {"OP": 54020, "CT": "montagem", "DATA": "2026-08-18", "CODIGO": 10400937, "QUANTIDADE PRODUZIDA": 79, "TURNO": "1°"}, {"OP": 53913, "CT": "montagem", "DATA": "2026-08-15", "CODIGO": 10400937, "QUANTIDADE PRODUZIDA": 32, "TURNO": "1°"}, {"OP": 54196, "CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400367, "QUANTIDADE PRODUZIDA": 72, "TURNO": "1°"}, {"OP": 54036, "CT": "montagem", "DATA": "2026-08-22", "CODIGO": 10400933, "QUANTIDADE PRODUZIDA": 44, "TURNO": "1°"}, {"OP": 54022, "CT": "montagem", "DATA": "2026-08-21", "CODIGO": 10400932, "QUANTIDADE PRODUZIDA": 24, "TURNO": "1°"}, {"OP": 54022, "CT": "montagem", "DATA": "2026-08-22", "CODIGO": 10400932, "QUANTIDADE PRODUZIDA": 82, "TURNO": "1°"}, {"OP": 54273, "CT": "montagem", "DATA": "2026-08-24", "CODIGO": 10401048, "QUANTIDADE PRODUZIDA": 4, "TURNO": "1°"}, {"OP": 52929, "CT": "injetora 6", "DATA": "2026-08-11", "CODIGO": 10300909, "QUANTIDADE PRODUZIDA": 79, "TURNO": "1°"}, {"OP": 53929, "CT": "injetora 6", "DATA": "2026-08-11", "CODIGO": 10300909, "QUANTIDADE PRODUZIDA": 153, "TURNO": "2°"}, {"OP": 52929, "CT": "injetora 6", "DATA": "2026-08-11", "CODIGO": 10300909, "QUANTIDADE PRODUZIDA": 207, "TURNO": "3°"}, {"OP": 52929, "CT": "injetora 6", "DATA": "2026-08-12", "CODIGO": 10300909, "QUANTIDADE PRODUZIDA": 110, "TURNO": "3°"}, {"OP": 52922, "CT": "injetora 9", "DATA": "2026-08-03", "CODIGO": 10300907, "QUANTIDADE PRODUZIDA": 970, "TURNO": "1°"}, {"OP": 52922, "CT": "injetora 9", "DATA": "2026-08-05", "CODIGO": 10300907, "QUANTIDADE PRODUZIDA": 1064, "TURNO": "2°"}, {"OP": 52801, "CT": "injetora 9", "DATA": "2026-07-14", "CODIGO": 10300897, "QUANTIDADE PRODUZIDA": 146, "TURNO": "1°"}, {"OP": 52801, "CT": "injetora 9", "DATA": "2026-07-14", "CODIGO": 10300897, "QUANTIDADE PRODUZIDA": 271, "TURNO": "2°"}, {"OP": 53541, "CT": "injetora 8", "DATA": "2026-08-08", "CODIGO": 10300897, "QUANTIDADE PRODUZIDA": 708, "TURNO": "2°"}, {"OP": 53541, "CT": "injetora 8", "DATA": "2026-08-09", "CODIGO": 10300897, "QUANTIDADE PRODUZIDA": 593, "TURNO": "3°"}, {"OP": 53541, "CT": "injetora 8", "DATA": "2026-08-10", "CODIGO": 10300897, "QUANTIDADE PRODUZIDA": 376, "TURNO": "1°"}, {"OP": 53541, "CT": "injetora 8", "DATA": "2026-08-10", "CODIGO": 10300897, "QUANTIDADE PRODUZIDA": 210, "TURNO": "2°"}, {"OP": 53541, "CT": "injetora 8", "DATA": "2026-08-10", "CODIGO": 10300897, "QUANTIDADE PRODUZIDA": 186, "TURNO": "3°"}, {"OP": 53778, "CT": "injetora 7", "DATA": "2026-08-07", "CODIGO": 10300946, "QUANTIDADE PRODUZIDA": 6272, "TURNO": "2°"}, {"OP": 53778, "CT": "injetora 7", "DATA": "2026-08-07", "CODIGO": 10300946, "QUANTIDADE PRODUZIDA": 13891, "TURNO": "3°"}, {"OP": 53778, "CT": "injetora 7", "DATA": "2026-08-08", "CODIGO": 10300946, "QUANTIDADE PRODUZIDA": 11743, "TURNO": "1°"}, {"OP": 53778, "CT": "injetora 7", "DATA": "2026-08-08", "CODIGO": 10300946, "QUANTIDADE PRODUZIDA": 11000, "TURNO": "2°"}, {"OP": 53778, "CT": "injetora 7", "DATA": "2026-08-09", "CODIGO": 10300946, "QUANTIDADE PRODUZIDA": 7741, "TURNO": "3°"}, {"OP": 53778, "CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300946, "QUANTIDADE PRODUZIDA": 9708, "TURNO": "1°"}];
+const REFUGO_BRUTOS = [{"OP": 53840, "SETOR": "injetora 2", "DATA": "2026-08-13", "CODIGO DO PRODUTO": 10400026, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 11, "TURNO": "1°"}, {"OP": "op-053828", "SETOR": "injetora 2", "DATA": "2026-08-12", "CODIGO DO PRODUTO": 10400324, "CODIGO DO REFUGO": 20200039, "DESCRIÇÃO REFUGO": "FALHA DA MÁQUINA", "QUANTIDADE": 20, "TURNO": "3°"}, {"OP": 53799, "SETOR": "injetora 2", "DATA": "2026-08-10", "CODIGO DO PRODUTO": 10400036, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 25, "TURNO": "2°"}, {"OP": 53799, "SETOR": "injetora 2", "DATA": "2026-08-10", "CODIGO DO PRODUTO": 10400036, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 4, "TURNO": "3°"}, {"OP": 53796, "SETOR": "injetora 2", "DATA": "2026-08-10", "CODIGO DO PRODUTO": 10400635, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 2, "TURNO": "1°"}, {"OP": 53796, "SETOR": "injetora 2", "DATA": "2026-08-10", "CODIGO DO PRODUTO": 10400635, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 15, "TURNO": "2°"}, {"OP": 53789, "SETOR": "injetora 2", "DATA": "2026-08-10", "CODIGO DO PRODUTO": 10400634, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 16, "TURNO": "1°"}, {"OP": 53781, "SETOR": "injetora 2", "DATA": "2026-08-08", "CODIGO DO PRODUTO": 10400668, "CODIGO DO REFUGO": 20200039, "DESCRIÇÃO REFUGO": "FALHA DA MÁQUINA", "QUANTIDADE": 250, "TURNO": "1°"}, {"OP": 53332, "SETOR": "injetora 2", "DATA": "2026-07-01", "CODIGO DO PRODUTO": 10400639, "CODIGO DO REFUGO": 20200039, "DESCRIÇÃO REFUGO": "FALHA DA MÁQUINA", "QUANTIDADE": 15, "TURNO": "1°"}, {"OP": 53332, "SETOR": "injetora 2", "DATA": "2026-07-01", "CODIGO DO PRODUTO": 10400639, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 4, "TURNO": "1°"}, {"OP": 54257, "SETOR": "injetora 2", "DATA": "2026-08-21", "CODIGO DO PRODUTO": 10400635, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 98, "TURNO": "2°"}, {"OP": 54257, "SETOR": "injetora 2", "DATA": "2026-08-21", "CODIGO DO PRODUTO": 10400635, "CODIGO DO REFUGO": 20200039, "DESCRIÇÃO REFUGO": "FALHA DA MÁQUINA", "QUANTIDADE": 3, "TURNO": "2°"}, {"OP": 54285, "SETOR": "injetora 2", "DATA": "2026-08-24", "CODIGO DO PRODUTO": 10400726, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 29, "TURNO": "1°"}, {"OP": 54285, "SETOR": "injetora 2", "DATA": "2026-08-21", "CODIGO DO PRODUTO": 10400726, "CODIGO DO REFUGO": 20200039, "DESCRIÇÃO REFUGO": "FALHA DA MÁQUINA", "QUANTIDADE": 11, "TURNO": "1°"}, {"OP": 53915, "SETOR": "injetora 2", "DATA": "2026-08-14", "CODIGO DO PRODUTO": 10400501, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 48, "TURNO": "1°"}, {"OP": 53983, "SETOR": "injetora 2", "DATA": "2026-08-14", "CODIGO DO PRODUTO": 10400003, "CODIGO DO REFUGO": 20200039, "DESCRIÇÃO REFUGO": "FALHA DA MÁQUINA", "QUANTIDADE": 16, "TURNO": "1°"}, {"OP": 54039, "SETOR": "injetora 2", "DATA": "2026-08-15", "CODIGO DO PRODUTO": 10400712, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 10, "TURNO": "1°"}, {"OP": 53996, "SETOR": "injetora 2", "DATA": "2026-08-17", "CODIGO DO PRODUTO": 10400042, "CODIGO DO REFUGO": 20200039, "DESCRIÇÃO REFUGO": "FALHA DA MÁQUINA", "QUANTIDADE": 14, "TURNO": "1°"}, {"OP": 53996, "SETOR": "injetora 2", "DATA": "2026-08-17", "CODIGO DO PRODUTO": 10400042, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 7, "TURNO": "1°"}, {"OP": 54149, "SETOR": "injetora 2", "DATA": "2026-08-19", "CODIGO DO PRODUTO": 10400713, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 8, "TURNO": "1°"}, {"OP": 54194, "SETOR": "injetora 2", "DATA": "2026-08-19", "CODIGO DO PRODUTO": 10400660, "CODIGO DO REFUGO": 20200039, "DESCRIÇÃO REFUGO": "FALHA DA MÁQUINA", "QUANTIDADE": 15, "TURNO": "3°"}, {"OP": 54194, "SETOR": "injetora 2", "DATA": "2026-08-19", "CODIGO DO PRODUTO": 10400660, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 5, "TURNO": "3°"}, {"OP": 54237, "SETOR": "injetora 2", "DATA": "2026-08-20", "CODIGO DO PRODUTO": 10300933, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 17, "TURNO": "2°"}, {"OP": 54237, "SETOR": "injetora 2", "DATA": "2026-08-20", "CODIGO DO PRODUTO": 10300933, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 20, "TURNO": "3°"}, {"OP": 54237, "SETOR": "injetora 2", "DATA": "2026-08-21", "CODIGO DO PRODUTO": 10300933, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 52, "TURNO": "1°"}, {"OP": 54237, "SETOR": "injetora 2", "DATA": "2026-08-21", "CODIGO DO PRODUTO": 10300933, "CODIGO DO REFUGO": 20200039, "DESCRIÇÃO REFUGO": "FALHA DA MÁQUINA", "QUANTIDADE": 15, "TURNO": "1°"}, {"OP": 54237, "SETOR": "injetora 2", "DATA": "2026-08-22", "CODIGO DO PRODUTO": 10300933, "CODIGO DO REFUGO": 20200038, "DESCRIÇÃO REFUGO": "CONTAMINAÇÃO DA MATÉRIA-PRIMA", "QUANTIDADE": 4, "TURNO": "1°"}];
 
 // Mapeamento de categorias e tipo de produto por Máquina
 const MAQUINA_INFO = {
@@ -500,6 +476,7 @@ function getInfo(maq) {
 }
 
 let dadosFiltrados = [...DADOS_BRUTOS];
+let refugoFiltrado = [...REFUGO_BRUTOS];
 let tabAtiva = { periodo: 'diaria' };
 
 // ═══════════════════════ THEME ═══════════════════════
@@ -522,8 +499,7 @@ function toggleTheme() {
 
 // ═══════════════════════ MULTISELECT DROPDOWN LOGIC ═══════════════════════
 // Ordenação sequencial solicitada: Injetoras 1-10, Sopros 1-4, Rebarbação, Montagem, Retrabalho
-const MAQUINAS_MESTRA_JS = ["injetora 1", "injetora 2", "injetora 3", "injetora 4", "injetora 5", "injetora 6", "injetora 7", "injetora 8", "injetora 9", "injetora 10", "sopro 1", "sopro 2", "sopro 3", "sopro 4", "rebarbação", "montagem", "retrabalho"];
-let MAQUINAS_ORDENADAS_JS = ["injetora 1", "injetora 2", "injetora 3", "injetora 4", "injetora 5", "injetora 7", "injetora 8", "injetora 9", "injetora 10", "sopro 1", "sopro 2", "rebarbação", "montagem", "retrabalho"];
+const MAQUINAS_ORDENADAS_JS = ["injetora 1", "injetora 2", "injetora 3", "injetora 4", "injetora 5", "injetora 6", "injetora 7", "injetora 8", "injetora 9", "injetora 10", "sopro 1", "sopro 2", "rebarbação", "montagem", "retrabalho"];
 
 const OPCOES = {
   ddTipoProduto: [
@@ -628,12 +604,26 @@ function aplicarFiltros() {
 
     return true;
   });
+
+  refugoFiltrado = REFUGO_BRUTOS.filter(r => {
+    if (ini && r.DATA < ini) return false;
+    if (fim && r.DATA > fim) return false;
+
+    const info = getInfo(r.SETOR);
+    if (!SEL.ddTipoProduto.has(info.tipo)) return false;
+    if (!SEL.ddCategoria.has(info.cat)) return false;
+    if (!SEL.ddMaquina.has(r.SETOR)) return false;
+    if (!SEL.ddTurno.has(r.TURNO)) return false;
+
+    return true;
+  });
+
   renderAll();
 }
 
 function resetarTudo() {
-  document.getElementById('filtroInicio').value = '2026-07-04';
-  document.getElementById('filtroFim').value = '2026-08-20';
+  document.getElementById('filtroInicio').value = '2026-06-05';
+  document.getElementById('filtroFim').value = '2026-08-24';
   Object.keys(OPCOES).forEach(ddId => {
     SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
     const container = document.getElementById(ddId.replace('dd', 'items'));
@@ -641,137 +631,8 @@ function resetarTudo() {
   });
   updateLabels();
   dadosFiltrados = [...DADOS_BRUTOS];
+  refugoFiltrado = [...REFUGO_BRUTOS];
   renderAll();
-}
-
-// ═══════════════════════ UPLOAD / ATUALIZAÇÃO VIA XLSX ═══════════════════════
-let dadosPendentes = null; // dados lidos do XLSX, aguardando confirmação do usuário
-
-function normalizarDataValor(v) {
-  if (v instanceof Date) {
-    // usa componentes UTC para evitar deslocamento de fuso horário
-    const ano = v.getUTCFullYear();
-    const mes = String(v.getUTCMonth() + 1).padStart(2, '0');
-    const dia = String(v.getUTCDate()).padStart(2, '0');
-    return `${ano}-${mes}-${dia}`;
-  }
-  const str = String(v ?? '').trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
-  return str;
-}
-
-function parseXLSXProducao(arrayBuffer) {
-  if (typeof XLSX === 'undefined') {
-    throw new Error('Biblioteca de leitura de XLSX não carregou (é necessária conexão com a internet na primeira vez).');
-  }
-  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
-  const nomeAba = workbook.SheetNames[0];
-  if (!nomeAba) throw new Error('A planilha não contém nenhuma aba.');
-  const planilha = workbook.Sheets[nomeAba];
-  const linhas = XLSX.utils.sheet_to_json(planilha, { raw: true, defval: '' });
-  if (!linhas.length) throw new Error('Planilha vazia ou sem linhas de dados.');
-
-  // Mapeia nomes de colunas ignorando maiúsculas/minúsculas e espaços extras
-  const mapaChaves = {};
-  Object.keys(linhas[0]).forEach(k => { mapaChaves[k.trim().toUpperCase()] = k; });
-
-  const obrigatorias = ['CT', 'DATA', 'CODIGO', 'QUANTIDADE PRODUZIDA', 'TURNO'];
-  const faltando = obrigatorias.filter(c => !(c in mapaChaves));
-  if (faltando.length > 0) {
-    throw new Error('Colunas ausentes na planilha: ' + faltando.join(', '));
-  }
-
-  const registros = linhas
-    .map(linha => ({
-      CT: String(linha[mapaChaves['CT']] ?? '').toLowerCase().trim(),
-      DATA: normalizarDataValor(linha[mapaChaves['DATA']]),
-      CODIGO: parseInt(linha[mapaChaves['CODIGO']], 10) || 0,
-      'QUANTIDADE PRODUZIDA': parseInt(linha[mapaChaves['QUANTIDADE PRODUZIDA']], 10) || 0,
-      TURNO: String(linha[mapaChaves['TURNO']] ?? '').trim()
-    }))
-    .filter(r => r.CT); // descarta linhas em branco
-
-  if (!registros.length) throw new Error('Nenhum registro válido encontrado na planilha.');
-  return registros;
-}
-
-function aplicarNovosDados(novosDados) {
-  DADOS_BRUTOS = novosDados;
-
-  // Recalcula a ordenação de máquinas com base na lista mestra
-  const maquinasPresentes = new Set(DADOS_BRUTOS.map(r => r.CT));
-  MAQUINAS_ORDENADAS_JS = MAQUINAS_MESTRA_JS.filter(m => maquinasPresentes.has(m));
-  maquinasPresentes.forEach(m => {
-    if (!MAQUINAS_ORDENADAS_JS.includes(m)) MAQUINAS_ORDENADAS_JS.push(m);
-  });
-  OPCOES.ddMaquina = MAQUINAS_ORDENADAS_JS.map(m => ({ id: m, label: m }));
-
-  // Reseta a seleção de todos os filtros para "todos marcados"
-  Object.keys(OPCOES).forEach(ddId => {
-    SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
-  });
-
-  // Atualiza o período do filtro de datas com base nos novos dados
-  const datasValidas = DADOS_BRUTOS.map(r => r.DATA).filter(Boolean).sort();
-  if (datasValidas.length) {
-    document.getElementById('filtroInicio').value = datasValidas[0];
-    document.getElementById('filtroFim').value = datasValidas[datasValidas.length - 1];
-  }
-
-  initDropdowns();
-  dadosFiltrados = [...DADOS_BRUTOS];
-  renderAll();
-}
-
-function habilitarBotaoAtualizar(habilitar) {
-  const btn = document.getElementById('atualizarBtn');
-  btn.disabled = !habilitar;
-  btn.style.opacity = habilitar ? '1' : '.5';
-  btn.style.cursor = habilitar ? 'pointer' : 'not-allowed';
-}
-
-function handleXlsxUpload(event) {
-  const arquivo = event.target.files[0];
-  const status = document.getElementById('uploadStatus');
-  if (!arquivo) return;
-
-  const leitor = new FileReader();
-  leitor.onload = function(e) {
-    try {
-      dadosPendentes = parseXLSXProducao(e.target.result);
-      status.textContent = `${dadosPendentes.length} registros prontos em "${arquivo.name}". Clique em Atualizar.`;
-      status.className = 'upload-status ok';
-      habilitarBotaoAtualizar(true);
-    } catch (err) {
-      dadosPendentes = null;
-      habilitarBotaoAtualizar(false);
-      status.textContent = 'Erro: ' + err.message;
-      status.className = 'upload-status err';
-    } finally {
-      event.target.value = '';
-    }
-  };
-  leitor.onerror = function() {
-    dadosPendentes = null;
-    habilitarBotaoAtualizar(false);
-    status.textContent = 'Erro ao ler o arquivo.';
-    status.className = 'upload-status err';
-    event.target.value = '';
-  };
-  leitor.readAsArrayBuffer(arquivo);
-}
-
-function atualizarDashboard() {
-  const status = document.getElementById('uploadStatus');
-  if (!dadosPendentes) return;
-  const qtd = dadosPendentes.length;
-  aplicarNovosDados(dadosPendentes);
-  dadosPendentes = null;
-  habilitarBotaoAtualizar(false);
-  status.textContent = `✔ Dashboard atualizado com ${qtd} registros.`;
-  status.className = 'upload-status ok';
 }
 
 // ═══════════════════════ HELPERS ═══════════════════════
@@ -819,6 +680,16 @@ function getDiaSemana(dateStr) {
   return DIAS_SEMANA[new Date(dateStr + 'T00:00:00').getDay()];
 }
 
+// Extrai somente os dígitos da OP (remove prefixos como "OP-"/"op-" e
+// zeros à esquerda), mesma lógica usada em analise_refugo.py, para
+// relacionar produção e refugo pela mesma Ordem de Produção.
+function normalizarOP(valor) {
+  if (valor === null || valor === undefined || valor === '') return null;
+  const digitos = String(valor).replace(/\D/g, '');
+  if (!digitos) return null;
+  return parseInt(digitos, 10);
+}
+
 function fmtDataBR(dateStr) {
   if (!dateStr || dateStr.length < 10) return dateStr;
   const parts = dateStr.split('-');
@@ -855,6 +726,26 @@ function getProdutosPorGrupo(records, keyFn) {
   return result;
 }
 
+// Versão genérica: agrupa por uma chave e detalha por uma subchave
+// customizável (usada pelos indicadores de refugo: causas × itens).
+function getBreakdownPorGrupo(records, keyFn, subKeyFn, valFn) {
+  const map = {};
+  records.forEach(r => {
+    const k = keyFn(r);
+    const sub = subKeyFn(r);
+    const val = Number(valFn(r)) || 0;
+    if (!map[k]) map[k] = {};
+    map[k][sub] = (map[k][sub] || 0) + val;
+  });
+  const result = {};
+  Object.keys(map).forEach(k => {
+    result[k] = Object.entries(map[k])
+      .map(([codigo, quantidade]) => ({ codigo, quantidade }))
+      .sort((a, b) => b.quantidade - a.quantidade);
+  });
+  return result;
+}
+
 function showBarTip(e, containerId, idx) {
   const item = chartDataStore[containerId] && chartDataStore[containerId][idx];
   if (!item) return;
@@ -865,29 +756,17 @@ function showBarTip(e, containerId, idx) {
     <span class="tip-total">${fmt(item.value)} un.</span>
   </div>`;
 
-  if (item.turnos && item.turnos.length > 0) {
-    html += `<div class="tip-subtitle">Por Turno</div>`;
-    html += `<div class="tip-list">`;
-    item.turnos.forEach(t => {
-      html += `<div class="tip-item">
-        <span class="tip-item-name" style="display:flex;align-items:center;gap:6px">
-          <span class="turno-legend-swatch t${t.n}"></span>${t.turno}
-        </span>
-        <span class="tip-item-val">${fmt(t.value)} un.</span>
-      </div>`;
-    });
-    html += `</div>`;
-  }
-
   if (item.produtos && item.produtos.length > 0) {
     const prodsValidos = item.produtos.filter(p => p.quantidade > 0);
     const lista = prodsValidos.length > 0 ? prodsValidos : item.produtos;
+    const subtitulo = item.subtitulo || 'Produtos Produzidos';
+    const prefixo = item.prefixo !== undefined ? item.prefixo : 'Cód. ';
 
-    html += `<div class="tip-subtitle">Produtos Produzidos (${lista.length})</div>`;
+    html += `<div class="tip-subtitle">${subtitulo} (${lista.length})</div>`;
     html += `<div class="tip-list">`;
     lista.forEach(p => {
       html += `<div class="tip-item">
-        <span class="tip-item-name">Cód. ${p.codigo}</span>
+        <span class="tip-item-name">${prefixo}${p.codigo}</span>
         <span class="tip-item-val">${fmt(p.quantidade)} un.</span>
       </div>`;
     });
@@ -1006,36 +885,6 @@ function renderVerticalBars(containerId, data) {
   container.innerHTML = html;
 }
 
-// ═══════════════════════ VERTICAL STACKED BAR CHART (POR TURNO) ═══════════════════════
-function renderStackedBars(containerId, data) {
-  const container = document.getElementById(containerId);
-  if (!data.length) { container.innerHTML = '<div class="no-data">Sem dados com os filtros selecionados</div>'; return; }
-
-  chartDataStore[containerId] = data;
-  const maxVal = Math.max(...data.map(d=>d.value), 1);
-  const barH = 240;
-
-  let html = '<div class="bar-chart">';
-  data.forEach((item, idx) => {
-    const totalH = Math.max((item.value / maxVal) * barH, 2);
-    let segsHtml = '';
-    item.turnos.forEach(t => {
-      const segH = item.value > 0 ? (t.value / item.value) * totalH : 0;
-      segsHtml += `<div class="bar-seg t${t.n}" style="height:${segH}px" title="${t.turno}: ${fmt(t.value)} un."></div>`;
-    });
-    html += `<div class="bar-col">
-      <div class="bar-val">${fmt(item.value)}</div>
-      <div class="bar-stack" style="height:${totalH}px"
-           onmouseenter="showBarTip(event, '${containerId}', ${idx})"
-           onmousemove="moveTip(event)"
-           onmouseleave="hideTip()">${segsHtml}</div>
-      <div class="bar-label" title="${item.label}">${item.label}</div>
-    </div>`;
-  });
-  html += '</div>';
-  container.innerHTML = html;
-}
-
 // ═══════════════════════ HORIZONTAL BAR CHART ═══════════════════════
 function renderHorizontalBars(containerId, data) {
   const container = document.getElementById(containerId);
@@ -1068,12 +917,8 @@ function setTab(btn, group) {
   if (group === 'periodo') renderChartPeriodo();
 }
 
-// Ordem e rótulos fixos dos turnos para empilhamento (1° embaixo, 3° em cima)
-const TURNOS_ORDEM = [{ turno: '1°', n: 1 }, { turno: '2°', n: 2 }, { turno: '3°', n: 3 }];
-
 // ═══════════════════════ RENDER: PERIODO ═══════════════════════
 function renderChartPeriodo() {
-  const legenda = document.getElementById('legendaPeriodo');
   let keyFn, fmtFn;
   if (tabAtiva.periodo === 'diaria') {
     keyFn = r => r.DATA;
@@ -1085,42 +930,16 @@ function renderChartPeriodo() {
     keyFn = r => getMonth(r.DATA);
     fmtFn = fmtMesAnoBR;
   }
+  const map = groupBy(dadosFiltrados, r => keyFn(r), r => r['QUANTIDADE PRODUZIDA']);
   const produtosMap = getProdutosPorGrupo(dadosFiltrados, keyFn);
-
-  if (tabAtiva.periodo === 'diaria') {
-    // Empilha os 3 turnos em uma única barra por dia
-    const map = groupBy(dadosFiltrados, r => keyFn(r), r => r['QUANTIDADE PRODUZIDA']);
-    const turnoMap = {};
-    dadosFiltrados.forEach(r => {
-      const k = keyFn(r);
-      if (!turnoMap[k]) turnoMap[k] = {};
-      turnoMap[k][r.TURNO] = (turnoMap[k][r.TURNO] || 0) + r['QUANTIDADE PRODUZIDA'];
-    });
-    const sorted = Object.entries(map).sort((a,b) => a[0].localeCompare(b[0]));
-    const data = sorted.map(([k,v]) => ({
-      label: fmtFn(k),
-      fullLabel: 'Data: ' + fmtDataBR(k),
-      value: v,
-      turnos: TURNOS_ORDEM.map(t => ({ turno: t.turno, n: t.n, value: (turnoMap[k] && turnoMap[k][t.turno]) || 0 })),
-      produtos: produtosMap[k] || []
-    }));
-    legenda.innerHTML = TURNOS_ORDEM.map(t => `
-      <span class="turno-legend-item">
-        <span class="turno-legend-swatch t${t.n}"></span>${t.turno} Turno
-      </span>`).join('');
-    renderStackedBars('chartPeriodo', data);
-  } else {
-    const map = groupBy(dadosFiltrados, r => keyFn(r), r => r['QUANTIDADE PRODUZIDA']);
-    const sorted = Object.entries(map).sort((a,b) => a[0].localeCompare(b[0]));
-    const data = sorted.map(([k,v]) => ({
-      label: fmtFn(k),
-      fullLabel: tabAtiva.periodo === 'semanal' ? 'Semana ' + fmtSemanaMesBR(k) : fmtMesAnoBR(k),
-      value: v,
-      produtos: produtosMap[k] || []
-    }));
-    legenda.innerHTML = '';
-    renderVerticalBars('chartPeriodo', data);
-  }
+  const sorted = Object.entries(map).sort((a,b) => a[0].localeCompare(b[0]));
+  const data = sorted.map(([k,v]) => ({
+    label: fmtFn(k),
+    fullLabel: tabAtiva.periodo === 'diaria' ? 'Data: ' + fmtDataBR(k) : (tabAtiva.periodo === 'semanal' ? 'Semana ' + fmtSemanaMesBR(k) : fmtMesAnoBR(k)),
+    value: v,
+    produtos: produtosMap[k] || []
+  }));
+  renderVerticalBars('chartPeriodo', data);
 }
 
 // ═══════════════════════ RENDER: CATEGORIES ═══════════════════════
@@ -1163,47 +982,102 @@ function renderChartDiaSemana() {
   renderHorizontalBars('chartDiaSemana', data);
 }
 
-// ═══════════════════════ RENDER: RANKING ═══════════════════════
-function renderRanking() {
-  const container = document.getElementById('rankingTable');
-  const map = groupBy(dadosFiltrados, r=>r.CT, r=>r['QUANTIDADE PRODUZIDA']);
-  const regMap = groupBy(dadosFiltrados, r=>r.CT, r=>1);
-  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]);
-  if (!sorted.length) { container.innerHTML = '<div class="no-data">Sem máquinas ativas com os filtros selecionados</div>'; return; }
+// ═══════════════════════ RENDER: INDICADORES DE REFUGO ═══════════════════════
+function renderKPIsRefugo() {
+  const container = document.getElementById('kpiRefugoGrid');
 
-  const maxVal = sorted[0][1] || 1;
-
-  let html = `<table class="rank-table">
-    <thead><tr>
-      <th style="width:50px">#</th>
-      <th>Máquina</th>
-      <th>Categoria / Tipo</th>
-      <th style="text-align:right">Total</th>
-      <th style="text-align:right">Média por Reg.</th>
-      <th style="text-align:right">Registros</th>
-      <th class="rank-bar-cell">Proporção</th>
-    </tr></thead><tbody>`;
-
-  sorted.forEach(([maq, total], i) => {
-    const regs = regMap[maq] || 1;
-    const media = total / regs;
-    const pct = (total / maxVal) * 100;
-    const rc = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
-    const info = getInfo(maq);
-    html += `<tr>
-      <td><span class="rank-num ${rc}">${i+1}</span></td>
-      <td style="font-weight:600">${maq}</td>
-      <td style="font-size:.78rem;color:var(--text-sub)">${info.cat} • ${info.tipo}</td>
-      <td style="text-align:right;font-weight:700">${fmt(total)}</td>
-      <td style="text-align:right">${fmtDec(media,0)}</td>
-      <td style="text-align:right">${regs}</td>
-      <td class="rank-bar-cell">
-        <div class="rank-bar-bg"><div class="rank-bar-fg" style="width:${pct}%"></div></div>
-      </td>
-    </tr>`;
+  // Refugo total por OP (chave normalizada)
+  const refugoPorOp = {};
+  refugoFiltrado.forEach(r => {
+    const key = normalizarOP(r.OP);
+    if (key === null) return;
+    refugoPorOp[key] = (refugoPorOp[key] || 0) + (Number(r['QUANTIDADE']) || 0);
   });
-  html += '</tbody></table>';
-  container.innerHTML = html;
+
+  // Produção total por OP, somente para as OPs que têm refugo registrado
+  const produzidoPorOp = {};
+  dadosFiltrados.forEach(r => {
+    const key = normalizarOP(r.OP);
+    if (key === null || !(key in refugoPorOp)) return;
+    produzidoPorOp[key] = (produzidoPorOp[key] || 0) + (Number(r['QUANTIDADE PRODUZIDA']) || 0);
+  });
+
+  // Taxa de refugo geral: somente sobre OPs com refugo E produção correspondente
+  let totalRefugoRelacionado = 0;
+  let totalProduzidoRelacionado = 0;
+  let opsRelacionadas = 0;
+  Object.keys(refugoPorOp).forEach(key => {
+    if (key in produzidoPorOp) {
+      totalRefugoRelacionado += refugoPorOp[key];
+      totalProduzidoRelacionado += produzidoPorOp[key];
+      opsRelacionadas++;
+    }
+  });
+  const totalGeralRelacionado = totalProduzidoRelacionado + totalRefugoRelacionado;
+  const taxa = totalGeralRelacionado > 0 ? (totalRefugoRelacionado / totalGeralRelacionado) * 100 : 0;
+
+  // Totais gerais (sem exigir correspondência), para contexto informativo
+  const totalRefugoTudo = refugoFiltrado.reduce((s, r) => s + (Number(r['QUANTIDADE']) || 0), 0);
+
+  const causaMap = groupBy(refugoFiltrado, r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']);
+  const causaTop = Object.entries(causaMap).sort((a, b) => b[1] - a[1])[0];
+
+  container.innerHTML = `
+    <div class="kpi-card kpi-highlight">
+      <div class="kpi-label">Taxa de Refugo Geral</div>
+      <div class="kpi-value">${fmtDec(taxa, 2)}%</div>
+      <div class="kpi-sub">${fmt(totalRefugoRelacionado)} de ${fmt(totalGeralRelacionado)} un. em ${opsRelacionadas} OP(s) relacionada(s)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Refugado</div>
+      <div class="kpi-value">${fmt(totalRefugoTudo)}</div>
+      <div class="kpi-sub">${fmt(refugoFiltrado.length)} registros</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Produção nas OPs com Refugo</div>
+      <div class="kpi-value">${fmt(totalProduzidoRelacionado)}</div>
+      <div class="kpi-sub">peças boas nas OPs relacionadas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Principal Causa</div>
+      <div class="kpi-value" style="font-size:1.05rem">${causaTop ? causaTop[0] : '-'}</div>
+      <div class="kpi-sub">${causaTop ? fmt(causaTop[1]) + ' un.' : '-'}</div>
+    </div>
+  `;
+}
+
+function renderChartCausasRefugo() {
+  const map = groupBy(refugoFiltrado, r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']);
+  const breakdown = getBreakdownPorGrupo(
+    refugoFiltrado, r => r['DESCRIÇÃO REFUGO'], r => String(r['CODIGO DO PRODUTO']), r => r['QUANTIDADE']
+  );
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  const data = sorted.map(([k, v]) => ({
+    label: k,
+    fullLabel: 'Causa: ' + k,
+    value: v,
+    produtos: breakdown[k] || [],
+    subtitulo: 'Itens Afetados',
+    prefixo: 'Cód. '
+  }));
+  renderHorizontalBars('chartCausasRefugo', data);
+}
+
+function renderChartItensRefugo() {
+  const map = groupBy(refugoFiltrado, r => String(r['CODIGO DO PRODUTO']), r => r['QUANTIDADE']);
+  const breakdown = getBreakdownPorGrupo(
+    refugoFiltrado, r => String(r['CODIGO DO PRODUTO']), r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']
+  );
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  const data = sorted.map(([k, v]) => ({
+    label: k,
+    fullLabel: 'Código: ' + k,
+    value: v,
+    produtos: breakdown[k] || [],
+    subtitulo: 'Causas Registradas',
+    prefixo: ''
+  }));
+  renderHorizontalBars('chartItensRefugo', data);
 }
 
 // ═══════════════════════ RENDER ALL ═══════════════════════
@@ -1213,7 +1087,9 @@ function renderAll() {
   renderChartMaquina();
   renderChartTurno();
   renderChartDiaSemana();
-  renderRanking();
+  renderKPIsRefugo();
+  renderChartCausasRefugo();
+  renderChartItensRefugo();
 }
 
 // Init
