@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Produção Diária</title>
+<style>
+/* ═══════════════════════ RESET & VARS ═══════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:        #f8fafc;
+  --bg-card:   rgba(255,255,255,0.88);
+  --bg-card-s: rgba(255,255,255,0.96);
+  --text:      #0f172a;
+  --text-sub:  #64748b;
+  --border:    rgba(226,232,240,0.8);
+  --accent:    #dc2626;
+  --accent-hover: #b91c1c;
+  --accent-light: #fef2f2;
+  --bar-fill:  #dc2626;
+  --bar-bg:    #f1f5f9;
+  --shadow:    0 4px 20px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.08);
+  --glass:     saturate(180%) blur(16px);
+  --radius:    12px;
+  --kpi-bg:    #ffffff;
+  --kpi-border: #e2e8f0;
+  --tooltip-bg:#0f172a; --tooltip-fg:#ffffff;
+  --turno1:    #fca5a5;
+  --turno2:    #dc2626;
+  --turno3:    #7f1d1d;
+}
+
+[data-theme="dark"]{
+  --bg:        #0b0f19;
+  --bg-card:   rgba(18,24,38,0.88);
+  --bg-card-s: rgba(18,24,38,0.96);
+  --text:      #f1f5f9;
+  --text-sub:  #94a3b8;
+  --border:    rgba(255,255,255,0.08);
+  --accent:    #ef4444;
+  --accent-hover: #f87171;
+  --accent-light: rgba(239,68,68,0.15);
+  --bar-fill:  #ef4444;
+  --bar-bg:    #1e293b;
+  --shadow:    0 4px 24px rgba(0,0,0,0.30);
+  --shadow-lg: 0 10px 32px rgba(0,0,0,0.45);
+  --kpi-bg:    #121826;
+  --kpi-border: rgba(255,255,255,0.08);
+  --tooltip-bg:#f1f5f9; --tooltip-fg:#0f172a;
+  --turno1:    #f87171;
+  --turno2:    #dc2626;
+  --turno3:    #7f1d1d;
+}
+
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:var(--bg);color:var(--text);
+  transition:background .35s,color .35s;
+  line-height:1.5; min-height:100vh;
+}
+
+/* ═══════════════════════ LAYOUT ═══════════════════════ */
+.wrapper{max-width:1380px;margin:0 auto;padding:20px 24px 40px}
+
+/* ── Header ── */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;margin-bottom:20px;
+}
+.header h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
+.header h1 span{color:var(--accent);}
+.header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.upload-status{font-size:.78rem;color:var(--text-sub)}
+.upload-status.ok{color:var(--accent)}
+.upload-status.err{color:#b91c1c}
+
+/* Theme toggle */
+.theme-btn{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:50px;padding:8px 18px;cursor:pointer;
+  font-size:.88rem;color:var(--text);display:flex;align-items:center;gap:8px;
+  backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
+  box-shadow:var(--shadow);transition:all .25s;
+}
+.theme-btn:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.theme-icon{font-size:1.1rem}
+
+/* ── Top Filter Bar ── */
+.filter-bar{
+  background:var(--bg-card);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px 20px;margin-bottom:24px;box-shadow:var(--shadow);
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;
+  position:relative;z-index:100;
+  transition:background .35s,border-color .35s;
+}
+.filter-group{display:flex;align-items:center;gap:8px}
+.filter-bar label{font-size:.78rem;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.04em}
+.filter-bar input[type=date]{
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:7px 12px;color:var(--text);font-size:.88rem;
+  transition:border-color .2s;
+}
+.filter-bar input[type=date]:focus{outline:none;border-color:var(--accent)}
+
+.btn-reset{
+  background:transparent;color:var(--text-sub);border:1px solid var(--border);
+  border-radius:8px;padding:8px 16px;font-size:.85rem;font-weight:600;cursor:pointer;
+  transition:all .2s;margin-left:auto;
+}
+.btn-reset:hover{border-color:var(--accent);color:var(--accent);background:var(--bar-bg)}
+
+/* ── Custom Multiselect Dropdowns ── */
+.dd-multiselect{
+  position:relative;display:inline-block;
+}
+.dd-trigger{
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:7px 14px;font-size:.88rem;font-weight:600;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;
+  transition:all .2s;
+}
+.dd-trigger:hover{border-color:var(--accent)}
+.dd-trigger .arrow{font-size:.7rem;opacity:.7;transition:transform .2s}
+.dd-multiselect.open .dd-trigger .arrow{transform:rotate(180deg)}
+
+.dd-panel{
+  position:absolute;top:calc(100% + 6px);left:0;
+  min-width:240px;max-width:320px;
+  background:var(--bg-card-s);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
+  border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow-lg);padding:10px;display:none;
+  z-index:1000;
+}
+.dd-multiselect.open .dd-panel{display:block}
+
+.dd-actions{
+  display:flex;justify-content:space-between;gap:6px;
+  margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);
+}
+.dd-actions button{
+  background:var(--bar-bg);border:none;border-radius:6px;
+  padding:4px 10px;font-size:.75rem;font-weight:600;color:var(--text);
+  cursor:pointer;transition:all .15s;
+}
+.dd-actions button:hover{background:var(--accent);color:#fff}
+
+.dd-items{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.dd-item{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;
+  border-radius:6px;font-size:.84rem;color:var(--text);
+  cursor:pointer;user-select:none;transition:background .15s;
+}
+.dd-item:hover{background:var(--bar-bg)}
+.dd-item input[type=checkbox]{cursor:pointer;accent-color:var(--accent);width:15px;height:15px}
+
+/* ── KPIs ── */
+.kpi-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:16px;margin-bottom:28px;
+}
+.kpi-card{
+  background:var(--kpi-bg);border:1px solid var(--kpi-border);
+  border-radius:var(--radius);padding:20px;color:var(--text);
+  box-shadow:var(--shadow);position:relative;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;
+}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.kpi-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-sub);margin-bottom:6px}
+.kpi-value{font-size:1.65rem;font-weight:800;letter-spacing:-.02em;color:var(--accent)}
+.kpi-sub{font-size:.78rem;color:var(--text-sub);margin-top:4px}
+
+/* ── Cards ── */
+.card{
+  background:var(--bg-card);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;margin-bottom:24px;box-shadow:var(--shadow);
+  transition:background .35s,border-color .35s;
+}
+.card-title{
+  font-size:1.02rem;font-weight:700;margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;color:var(--text);
+}
+
+/* ── Tab buttons ── */
+.tabs{display:flex;gap:6px;margin-bottom:18px}
+.tab-btn{
+  background:var(--bar-bg);border:none;border-radius:8px;
+  padding:7px 16px;font-size:.82rem;font-weight:600;color:var(--text-sub);
+  cursor:pointer;transition:all .2s;
+}
+.tab-btn.active{background:var(--accent);color:#fff}
+.tab-btn:hover:not(.active){background:var(--border);color:var(--text)}
+
+/* ── Bar Charts (CSS) ── */
+.chart-container{position:relative}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:260px;padding:0 4px}
+
+.bar-col{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-end;min-width:0;position:relative;
+}
+.bar{
+  width:100%;max-width:48px;border-radius:6px 6px 2px 2px;
+  background:var(--bar-fill);position:relative;
+  transition:height .4s cubic-bezier(.4,0,.2,1);
+  cursor:pointer;min-height:2px;
+}
+.bar:hover{opacity:.85;transform:scaleX(1.05)}
+
+/* Barra empilhada por turno */
+.bar-stack{
+  width:100%;max-width:48px;display:flex;flex-direction:column-reverse;
+  border-radius:6px 6px 2px 2px;overflow:hidden;cursor:pointer;min-height:2px;
+}
+.bar-stack:hover{opacity:.85;transform:scaleX(1.05)}
+.bar-seg{width:100%;transition:height .4s cubic-bezier(.4,0,.2,1);min-height:0}
+.bar-seg.t1{background:var(--turno1)}
+.bar-seg.t2{background:var(--turno2)}
+.bar-seg.t3{background:var(--turno3)}
+
+.turno-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:.78rem;color:var(--text-sub)}
+.turno-legend-item{display:flex;align-items:center;gap:6px}
+.turno-legend-swatch{width:12px;height:12px;border-radius:3px;display:inline-block}
+.turno-legend-swatch.t1{background:var(--turno1)}
+.turno-legend-swatch.t2{background:var(--turno2)}
+.turno-legend-swatch.t3{background:var(--turno3)}
+.bar-label{
+  font-size:.68rem;color:var(--text-sub);margin-top:6px;
+  text-align:center;word-break:break-word;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:100%;
+}
+.bar-val{
+  font-size:.68rem;font-weight:700;color:var(--text);
+  margin-bottom:4px;text-align:center;
+}
+
+/* Horizontal bars */
+.h-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.h-bar-name{
+  flex:0 0 110px;font-size:.82rem;font-weight:600;
+  text-align:right;color:var(--text);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.h-bar-track{flex:1;height:26px;background:var(--bar-bg);border-radius:6px;overflow:hidden;position:relative}
+.h-bar-fill{
+  height:100%;border-radius:6px;background:var(--bar-fill);
+  transition:width .5s cubic-bezier(.4,0,.2,1);
+  display:flex;align-items:center;padding-left:10px;
+  font-size:.75rem;font-weight:700;color:#fff;
+  min-width:fit-content;
+}
+
+/* ── Grid layouts ── */
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px}
+
+/* ── Ranking Table ── */
+.rank-table{width:100%;border-collapse:collapse}
+.rank-table th{
+  text-align:left;font-size:.75rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--text-sub);padding:10px 12px;
+  border-bottom:2px solid var(--border);
+}
+.rank-table td{
+  padding:10px 12px;font-size:.88rem;border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.rank-table tr:hover td{background:var(--bar-bg)}
+.rank-num{
+  display:inline-flex;width:24px;height:24px;border-radius:50%;
+  align-items:center;justify-content:center;font-size:.75rem;font-weight:700;
+  background:var(--bar-bg);color:var(--text-sub);
+}
+.rank-1{background:var(--accent);color:#fff}
+.rank-2{background:var(--accent2);color:#fff}
+.rank-3{background:var(--accent3);color:#fff}
+.rank-bar-cell{width:40%}
+.rank-bar-bg{height:8px;background:var(--bar-bg);border-radius:4px;overflow:hidden}
+.rank-bar-fg{height:100%;border-radius:4px;background:var(--bar-fill);transition:width .5s cubic-bezier(.4,0,.2,1)}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .grid-3{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+}
+@media(max-width:600px){
+  .wrapper{padding:12px 10px 30px}
+  .header h1{font-size:1.2rem}
+  .bar-chart{height:200px}
+  .h-bar-name{flex:0 0 75px;font-size:.72rem}
+}
+
+/* ── Tooltip Flutuante ── */
+.tooltip{
+  position:fixed;background:var(--bg-card-s);color:var(--text);
+  border:1px solid var(--border);border-radius:12px;
+  padding:12px 16px;font-size:.82rem;
+  pointer-events:none;opacity:0;transition:opacity .15s ease-out;
+  z-index:9999;box-shadow:var(--shadow-lg);
+  backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
+  min-width:220px;max-width:320px;max-height:360px;overflow-y:auto;
+}
+.tooltip::-webkit-scrollbar{width:4px}
+.tooltip::-webkit-scrollbar-track{background:transparent}
+.tooltip::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.tooltip.show{opacity:1}
+.tip-header{
+  font-weight:700;font-size:.88rem;margin-bottom:8px;padding-bottom:6px;
+  border-bottom:1px solid var(--border);display:flex;
+  justify-content:space-between;align-items:center;gap:12px;
+}
+.tip-title{color:var(--text);font-weight:700}
+.tip-total{color:var(--accent);font-weight:800;font-size:.9rem}
+.tip-subtitle{
+  font-size:.7rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--text-sub);margin-top:4px;margin-bottom:6px;
+}
+.tip-list{display:flex;flex-direction:column;gap:4px}
+.tip-item{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:.8rem;padding:4px 8px;border-radius:6px;background:var(--bar-bg);
+}
+.tip-item-name{color:var(--text);font-weight:600;font-family:Consolas,Monaco,monospace}
+.tip-item-val{color:var(--accent);font-weight:700;margin-left:12px}
+
+/* ── No data ── */
+.no-data{
+  text-align:center;padding:40px;color:var(--text-sub);font-style:italic;
+}
+</style>
+</head>
+<body>
+<div class="tooltip" id="tooltip"></div>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Dashboard <span>Produção Diária</span></h1>
+    <div class="header-actions">
+      <span class="upload-status" id="uploadStatus"></span>
+      <input type="file" id="xlsxUpload" accept=".xlsx,.xls" style="display:none" onchange="handleXlsxUpload(event)">
+      <button class="theme-btn" id="uploadBtn" onclick="document.getElementById('xlsxUpload').click()">
+        <span class="theme-icon">📁</span>
+        <span>Carregar XLSX</span>
+      </button>
+      <button class="theme-btn" id="atualizarBtn" onclick="atualizarDashboard()" disabled style="opacity:.5;cursor:not-allowed">
+        <span class="theme-icon">🔄</span>
+        <span>Atualizar</span>
+      </button>
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+        <span class="theme-icon" id="themeIcon">🌙</span>
+        <span id="themeLabel">Escuro</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Top Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>De:</label>
+      <input type="date" id="filtroInicio" value="2026-07-04" onchange="aplicarFiltros()">
+    </div>
+    <div class="filter-group">
+      <label>Até:</label>
+      <input type="date" id="filtroFim" value="2026-08-20" onchange="aplicarFiltros()">
+    </div>
+
+    <!-- Dropdown: Tipo de Produto -->
+    <div class="dd-multiselect" id="ddTipoProduto">
+      <div class="dd-trigger" onclick="toggleDD('ddTipoProduto')">
+        <span>Tipo: <strong id="lblTipoProduto">Todos</strong></span>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="dd-panel">
+        <div class="dd-actions">
+          <button onclick="checkAllDD('ddTipoProduto', true)">Marcar Todos</button>
+          <button onclick="checkAllDD('ddTipoProduto', false)">Desmarcar Todos</button>
+        </div>
+        <div class="dd-items" id="itemsTipoProduto"></div>
+      </div>
+    </div>
+
+    <!-- Dropdown: Categoria de Máquinas -->
+    <div class="dd-multiselect" id="ddCategoria">
+      <div class="dd-trigger" onclick="toggleDD('ddCategoria')">
+        <span>Categoria: <strong id="lblCategoria">Todas</strong></span>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="dd-panel">
+        <div class="dd-actions">
+          <button onclick="checkAllDD('ddCategoria', true)">Marcar Todas</button>
+          <button onclick="checkAllDD('ddCategoria', false)">Desmarcar Todas</button>
+        </div>
+        <div class="dd-items" id="itemsCategoria"></div>
+      </div>
+    </div>
+
+    <!-- Dropdown: Máquina (Ordenadas) -->
+    <div class="dd-multiselect" id="ddMaquina">
+      <div class="dd-trigger" onclick="toggleDD('ddMaquina')">
+        <span>Máquinas: <strong id="lblMaquina">Todas</strong></span>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="dd-panel">
+        <div class="dd-actions">
+          <button onclick="checkAllDD('ddMaquina', true)">Marcar Todas</button>
+          <button onclick="checkAllDD('ddMaquina', false)">Desmarcar Todas</button>
+        </div>
+        <div class="dd-items" id="itemsMaquina"></div>
+      </div>
+    </div>
+
+    <!-- Dropdown: Turno -->
+    <div class="dd-multiselect" id="ddTurno">
+      <div class="dd-trigger" onclick="toggleDD('ddTurno')">
+        <span>Turno: <strong id="lblTurno">Todos</strong></span>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="dd-panel">
+        <div class="dd-actions">
+          <button onclick="checkAllDD('ddTurno', true)">Marcar Todos</button>
+          <button onclick="checkAllDD('ddTurno', false)">Desmarcar Todos</button>
+        </div>
+        <div class="dd-items" id="itemsTurno"></div>
+      </div>
+    </div>
+
+    <button class="btn-reset" onclick="resetarTudo()">Limpar Filtros</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- Main chart: daily/weekly/monthly -->
+  <div class="card">
+    <div class="card-title">Produção por Período</div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="diaria" onclick="setTab(this,'periodo')">Diária</button>
+      <button class="tab-btn" data-tab="semanal" onclick="setTab(this,'periodo')">Semanal</button>
+      <button class="tab-btn" data-tab="mensal" onclick="setTab(this,'periodo')">Mensal</button>
+    </div>
+    <div class="turno-legend" id="legendaPeriodo"></div>
+    <div id="chartPeriodo" class="chart-container"></div>
+  </div>
+
+  <!-- Category breakdowns -->
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">Por Máquina</div>
+      <div id="chartMaquina" class="chart-container"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Por Turno</div>
+      <div id="chartTurno" class="chart-container"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Por Dia da Semana</div>
+      <div id="chartDiaSemana" class="chart-container"></div>
+    </div>
+  </div>
+
+  <!-- Ranking -->
+  <div class="card">
+    <div class="card-title">Ranking de Máquinas</div>
+    <div id="rankingTable"></div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ═══════════════════════ DATA & CATEGORIZATION ═══════════════════════
+let DADOS_BRUTOS = [{"CT": "injetora 1", "DATA": "2026-08-12", "CODIGO": 10400634, "QUANTIDADE PRODUZIDA": 576, "TURNO": "3°"}, {"CT": "injetora 1", "DATA": "2026-08-13", "CODIGO": 10401112, "QUANTIDADE PRODUZIDA": 24, "TURNO": "2°"}, {"CT": "injetora 1", "DATA": "2026-08-13", "CODIGO": 10401089, "QUANTIDADE PRODUZIDA": 22, "TURNO": "2°"}, {"CT": "injetora 1", "DATA": "2026-08-14", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 215, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-14", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 1211, "TURNO": "2°"}, {"CT": "injetora 1", "DATA": "2026-08-14", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 1", "DATA": "2026-08-15", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 1166, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-15", "CODIGO": 10400633, "QUANTIDADE PRODUZIDA": 408, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-12", "CODIGO": 10400324, "QUANTIDADE PRODUZIDA": 283, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400324, "QUANTIDADE PRODUZIDA": 497, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400372, "QUANTIDADE PRODUZIDA": 22, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400026, "QUANTIDADE PRODUZIDA": 96, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400026, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-13", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 36, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400372, "QUANTIDADE PRODUZIDA": 498, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 12, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400003, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-14", "CODIGO": 10400501, "QUANTIDADE PRODUZIDA": 48, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-15", "CODIGO": 10400712, "QUANTIDADE PRODUZIDA": 88, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-15", "CODIGO": 10400712, "QUANTIDADE PRODUZIDA": 112, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-17", "CODIGO": 10400042, "QUANTIDADE PRODUZIDA": 130, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 69, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 221, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400925, "QUANTIDADE PRODUZIDA": 18, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-14", "CODIGO": 10400466, "QUANTIDADE PRODUZIDA": 163, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-14", "CODIGO": 10400466, "QUANTIDADE PRODUZIDA": 58, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-12", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 192, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-13", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-13", "CODIGO": 10400034, "QUANTIDADE PRODUZIDA": 114, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-13", "CODIGO": 10400034, "QUANTIDADE PRODUZIDA": 206, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-14", "CODIGO": 10400391, "QUANTIDADE PRODUZIDA": 202, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-15", "CODIGO": 10400391, "QUANTIDADE PRODUZIDA": 280, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-17", "CODIGO": 10400915, "QUANTIDADE PRODUZIDA": 364, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400970, "QUANTIDADE PRODUZIDA": 80, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10401081, "QUANTIDADE PRODUZIDA": 100, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400927, "QUANTIDADE PRODUZIDA": 70, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-13", "CODIGO": 10400385, "QUANTIDADE PRODUZIDA": 288, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-15", "CODIGO": 10400385, "QUANTIDADE PRODUZIDA": 192, "TURNO": "2°"}, {"CT": "retrabalho", "DATA": "2026-08-20", "CODIGO": 10400990, "QUANTIDADE PRODUZIDA": 108, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-17", "CODIGO": 10400275, "QUANTIDADE PRODUZIDA": 37, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400275, "QUANTIDADE PRODUZIDA": 283, "TURNO": "1°"}, {"CT": "sopro 2", "DATA": "2026-08-19", "CODIGO": 10300019, "QUANTIDADE PRODUZIDA": 504, "TURNO": "1°"}, {"CT": "sopro 2", "DATA": "2026-08-07", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 455, "TURNO": "1°"}, {"CT": "sopro 2", "DATA": "2026-08-14", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 67, "TURNO": "1°"}, {"CT": "sopro 2", "DATA": "2026-08-14", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 761, "TURNO": "2°"}, {"CT": "sopro 2", "DATA": "2026-08-14", "CODIGO": 10300968, "QUANTIDADE PRODUZIDA": 395, "TURNO": "3°"}, {"CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400662, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "sopro 1", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 558, "TURNO": "1°"}, {"CT": "sopro 1", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 842, "TURNO": "1°"}, {"CT": "sopro 1", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 975, "TURNO": "2°"}, {"CT": "sopro 1", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 625, "TURNO": "3°"}, {"CT": "sopro 1", "DATA": "2026-08-04", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 744, "TURNO": "3°"}, {"CT": "sopro 1", "DATA": "2026-08-05", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 911, "TURNO": "1°"}, {"CT": "sopro 1", "DATA": "2026-08-05", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 352, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-03", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 276, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-03", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 222, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-03", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 834, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-04", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 912, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-04", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 903, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-05", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 309, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-06", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 932, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-06", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1034, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-06", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 862, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-07", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1039, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-07", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1219, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-07", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 1008, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-08", "CODIGO": 10401097, "QUANTIDADE PRODUZIDA": 456, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10400402, "QUANTIDADE PRODUZIDA": 96, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-19", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 36, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 19, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400940, "QUANTIDADE PRODUZIDA": 31, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-20", "CODIGO": 10400943, "QUANTIDADE PRODUZIDA": 7, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-19", "CODIGO": 10401120, "QUANTIDADE PRODUZIDA": 228, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 22, "TURNO": "2°"}, {"CT": "injetora 2", "DATA": "2026-08-18", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 140, "TURNO": "3°"}, {"CT": "injetora 2", "DATA": "2026-08-19", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 798, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-17", "CODIGO": 10400401, "QUANTIDADE PRODUZIDA": 60, "TURNO": "2°"}, {"CT": "retrabalho", "DATA": "2026-08-19", "CODIGO": 10400661, "QUANTIDADE PRODUZIDA": 228, "TURNO": "1°"}, {"CT": "retrabalho", "DATA": "2026-08-20", "CODIGO": 10400661, "QUANTIDADE PRODUZIDA": 122, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300058, "QUANTIDADE PRODUZIDA": 390, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300058, "QUANTIDADE PRODUZIDA": 774, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300058, "QUANTIDADE PRODUZIDA": 832, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 854, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 315, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 573, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300332, "QUANTIDADE PRODUZIDA": 1022, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-02", "CODIGO": 10300077, "QUANTIDADE PRODUZIDA": 258, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-03", "CODIGO": 10300077, "QUANTIDADE PRODUZIDA": 744, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 120, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 840, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-02", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 45, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300352, "QUANTIDADE PRODUZIDA": 728, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-07-19", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 360, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-07-30", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-07-30", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 570, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-07-30", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 875, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-07-31", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 780, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-07-31", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 821, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-01", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 160, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-03", "CODIGO": 10300072, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-03", "CODIGO": 10300072, "QUANTIDADE PRODUZIDA": 653, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300072, "QUANTIDADE PRODUZIDA": 79, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-04", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 477, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 800, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-05", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 360, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 440, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 296, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-06", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 590, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 370, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 212, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-08", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 80, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-08", "CODIGO": 10300267, "QUANTIDADE PRODUZIDA": 378, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300311, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300311, "QUANTIDADE PRODUZIDA": 258, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 682, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-07", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 511, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-14", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 560, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-15", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 1608, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-15", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 539, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-16", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 318, "TURNO": "3°"}, {"CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 456, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 654, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-18", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 946, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-08", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-10", "CODIGO": 10300535, "QUANTIDADE PRODUZIDA": 319, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 255, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-17", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 258, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-18", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 214, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-18", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 1022, "TURNO": "2°"}, {"CT": "rebarbação", "DATA": "2026-08-19", "CODIGO": 10300021, "QUANTIDADE PRODUZIDA": 251, "TURNO": "1°"}, {"CT": "rebarbação", "DATA": "2026-08-19", "CODIGO": 10300019, "QUANTIDADE PRODUZIDA": 504, "TURNO": "2°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10300399, "QUANTIDADE PRODUZIDA": 66, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10401088, "QUANTIDADE PRODUZIDA": 21, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10401102, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-18", "CODIGO": 10400873, "QUANTIDADE PRODUZIDA": 760, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-19", "CODIGO": 10400873, "QUANTIDADE PRODUZIDA": 830, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-19", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 80, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-19", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 620, "TURNO": "2°"}, {"CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10400052, "QUANTIDADE PRODUZIDA": 56, "TURNO": "1°"}, {"CT": "montagem", "DATA": "2026-08-17", "CODIGO": 10400147, "QUANTIDADE PRODUZIDA": 1000, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 11052, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 4292, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 708, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 854, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-10", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 1390, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-11", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 5341, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-11", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 2979, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-11", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 5164, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-12", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-13", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 5361, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-13", "CODIGO": 10300303, "QUANTIDADE PRODUZIDA": 4075, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 556, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 1864, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-12", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 74, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-13", "CODIGO": 10300865, "QUANTIDADE PRODUZIDA": 1704, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-10", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 444, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-10", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 941, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 202, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-11", "CODIGO": 10300230, "QUANTIDADE PRODUZIDA": 418, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-19", "CODIGO": 10400925, "QUANTIDADE PRODUZIDA": 51, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-13", "CODIGO": 10400925, "QUANTIDADE PRODUZIDA": 0, "TURNO": "2°"}, {"CT": "montagem", "DATA": "2026-08-10", "CODIGO": 10400027, "QUANTIDADE PRODUZIDA": 5, "TURNO": "3°"}, {"CT": "injetora 3", "DATA": "2026-08-08", "CODIGO": 10400781, "QUANTIDADE PRODUZIDA": 23, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-17", "CODIGO": 10300055, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-08", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 108, "TURNO": "1°"}, {"CT": "injetora 3", "DATA": "2026-08-08", "CODIGO": 10400335, "QUANTIDADE PRODUZIDA": 92, "TURNO": "2°"}, {"CT": "injetora 3", "DATA": "2026-08-18", "CODIGO": 10400781, "QUANTIDADE PRODUZIDA": 16, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 338, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 343, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400440, "QUANTIDADE PRODUZIDA": 72, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400440, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 5", "DATA": "2026-08-15", "CODIGO": 10400440, "QUANTIDADE PRODUZIDA": 368, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-06", "CODIGO": 10400211, "QUANTIDADE PRODUZIDA": 71, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-06", "CODIGO": 10400211, "QUANTIDADE PRODUZIDA": 96, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400280, "QUANTIDADE PRODUZIDA": 266, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400086, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-06", "CODIGO": 10401106, "QUANTIDADE PRODUZIDA": 27, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-04", "CODIGO": 10400469, "QUANTIDADE PRODUZIDA": 538, "TURNO": "3°"}, {"CT": "injetora 5", "DATA": "2026-08-05", "CODIGO": 10400469, "QUANTIDADE PRODUZIDA": 260, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-04", "CODIGO": 10401078, "QUANTIDADE PRODUZIDA": 100, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-03", "CODIGO": 10400315, "QUANTIDADE PRODUZIDA": 191, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-03", "CODIGO": 10400281, "QUANTIDADE PRODUZIDA": 86, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-28", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 240, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-18", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 705, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-07-29", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 715, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-29", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 273, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-07-31", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 359, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-07-31", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 436, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-01", "CODIGO": 10400279, "QUANTIDADE PRODUZIDA": 646, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 70, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 122, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-07", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 47, "TURNO": "2°"}, {"CT": "injetora 5", "DATA": "2026-08-14", "CODIGO": 10400989, "QUANTIDADE PRODUZIDA": 152, "TURNO": "1°"}, {"CT": "injetora 5", "DATA": "2026-08-19", "CODIGO": 10400989, "QUANTIDADE PRODUZIDA": 32, "TURNO": "1°"}, {"CT": "injetora 2", "DATA": "2026-08-20", "CODIGO": 10400015, "QUANTIDADE PRODUZIDA": 200, "TURNO": "1°"}, {"CT": "injetora 1", "DATA": "2026-08-20", "CODIGO": 10400322, "QUANTIDADE PRODUZIDA": 57, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-19", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 225, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-19", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-20", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 156, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-19", "CODIGO": 10401121, "QUANTIDADE PRODUZIDA": 60, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 153, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-09", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 135, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10401100, "QUANTIDADE PRODUZIDA": 39, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-07", "CODIGO": 10400971, "QUANTIDADE PRODUZIDA": 12, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10401082, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-08", "CODIGO": 10400782, "QUANTIDADE PRODUZIDA": 102, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400727, "QUANTIDADE PRODUZIDA": 12, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400727, "QUANTIDADE PRODUZIDA": 57, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400004, "QUANTIDADE PRODUZIDA": 552, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-05", "CODIGO": 10401083, "QUANTIDADE PRODUZIDA": 65, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-05", "CODIGO": 10400039, "QUANTIDADE PRODUZIDA": 210, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-07-31", "CODIGO": 10400013, "QUANTIDADE PRODUZIDA": 539, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-03", "CODIGO": 10400013, "QUANTIDADE PRODUZIDA": 71, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-05", "CODIGO": 10400726, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-06", "CODIGO": 10400726, "QUANTIDADE PRODUZIDA": 480, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-14", "CODIGO": 10300391, "QUANTIDADE PRODUZIDA": 202, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-15", "CODIGO": 10300391, "QUANTIDADE PRODUZIDA": 280, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-09", "CODIGO": 10401043, "QUANTIDADE PRODUZIDA": 18, "TURNO": "3°"}, {"CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10401043, "QUANTIDADE PRODUZIDA": 123, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10400030, "QUANTIDADE PRODUZIDA": 192, "TURNO": "1°"}, {"CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10400004, "QUANTIDADE PRODUZIDA": 240, "TURNO": "2°"}, {"CT": "injetora 4", "DATA": "2026-08-10", "CODIGO": 10400004, "QUANTIDADE PRODUZIDA": 294, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300874, "QUANTIDADE PRODUZIDA": 0, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300874, "QUANTIDADE PRODUZIDA": 594, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-18", "CODIGO": 10300874, "QUANTIDADE PRODUZIDA": 996, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-18", "CODIGO": 10300903, "QUANTIDADE PRODUZIDA": 495, "TURNO": "1°"}, {"CT": "injetora 8", "DATA": "2026-08-18", "CODIGO": 10300903, "QUANTIDADE PRODUZIDA": 2550, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300866, "QUANTIDADE PRODUZIDA": 280, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300866, "QUANTIDADE PRODUZIDA": 3701, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-13", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 1203, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-16", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-17", "CODIGO": 10300177, "QUANTIDADE PRODUZIDA": 810, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-15", "CODIGO": 10300395, "QUANTIDADE PRODUZIDA": 960, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-16", "CODIGO": 10300395, "QUANTIDADE PRODUZIDA": 840, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-17", "CODIGO": 10300395, "QUANTIDADE PRODUZIDA": 576, "TURNO": "1°"}, {"CT": "injetora 10", "DATA": "2026-08-08", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 2387, "TURNO": "1°"}, {"CT": "injetora 10", "DATA": "2026-08-08", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 6600, "TURNO": "2°"}, {"CT": "injetora 10", "DATA": "2026-08-09", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 2764, "TURNO": "3°"}, {"CT": "injetora 10", "DATA": "2026-08-13", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 2288, "TURNO": "1°"}, {"CT": "injetora 10", "DATA": "2026-08-13", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4546, "TURNO": "2°"}, {"CT": "injetora 10", "DATA": "2026-08-13", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 10", "DATA": "2026-08-14", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4574, "TURNO": "1°"}, {"CT": "injetora 10", "DATA": "2026-08-14", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4915, "TURNO": "2°"}, {"CT": "injetora 10", "DATA": "2026-08-14", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 4551, "TURNO": "3°"}, {"CT": "injetora 10", "DATA": "2026-08-15", "CODIGO": 10300948, "QUANTIDADE PRODUZIDA": 5085, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 534, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 600, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 0, "TURNO": "3°"}, {"CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300328, "QUANTIDADE PRODUZIDA": 920, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300180, "QUANTIDADE PRODUZIDA": 550, "TURNO": "1°"}, {"CT": "injetora 9", "DATA": "2026-08-14", "CODIGO": 10300180, "QUANTIDADE PRODUZIDA": 562, "TURNO": "2°"}, {"CT": "injetora 9", "DATA": "2026-08-15", "CODIGO": 10300180, "QUANTIDADE PRODUZIDA": 888, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-04", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 3476, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-04", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 9699, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-04", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 11747, "TURNO": "3°"}, {"CT": "injetora 7", "DATA": "2026-08-05", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 9911, "TURNO": "1°"}, {"CT": "injetora 7", "DATA": "2026-08-05", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 9578, "TURNO": "2°"}, {"CT": "injetora 7", "DATA": "2026-08-14", "CODIGO": 10300945, "QUANTIDADE PRODUZIDA": 0, "TURNO": "1°"}];
+
+// Mapeamento de categorias e tipo de produto por Máquina
+const MAQUINA_INFO = {
+  'injetora 1':   { cat: 'Injetoras Grandes', tipo: 'Produto Acabado' },
+  'injetora 2':   { cat: 'Injetoras Grandes', tipo: 'Produto Acabado' },
+  'injetora 3':   { cat: 'Injetoras Grandes', tipo: 'Produto Acabado' },
+  'injetora 4':   { cat: 'Injetoras Grandes', tipo: 'Produto Acabado' },
+  'injetora 5':   { cat: 'Injetoras Grandes', tipo: 'Produto Acabado' },
+  'injetora 6':   { cat: 'Injetoras Pequenas', tipo: 'Produto Semi Acabado' },
+  'injetora 7':   { cat: 'Injetoras Pequenas', tipo: 'Produto Semi Acabado' },
+  'injetora 8':   { cat: 'Injetoras Pequenas', tipo: 'Produto Semi Acabado' },
+  'injetora 9':   { cat: 'Injetoras Pequenas', tipo: 'Produto Semi Acabado' },
+  'injetora 10':  { cat: 'Injetoras Pequenas', tipo: 'Produto Semi Acabado' },
+  'sopro 1':      { cat: 'Sopros',            tipo: 'Produto Semi Acabado' },
+  'sopro 2':      { cat: 'Sopros',            tipo: 'Produto Semi Acabado' },
+  'sopro 3':      { cat: 'Sopros',            tipo: 'Produto Semi Acabado' },
+  'sopro 4':      { cat: 'Sopros',            tipo: 'Produto Semi Acabado' },
+  'rebarbação':   { cat: 'Setor Rebarbação',  tipo: 'Produto Semi Acabado' },
+  'montagem':     { cat: 'Setor PU / Montagem', tipo: 'Produto Semi Acabado' },
+  'retrabalho':   { cat: 'Setor PU / Montagem', tipo: 'Produto Semi Acabado' }
+};
+
+function getInfo(maq) {
+  return MAQUINA_INFO[maq] || { cat: 'Outros', tipo: 'Produto Semi Acabado' };
+}
+
+let dadosFiltrados = [...DADOS_BRUTOS];
+let tabAtiva = { periodo: 'diaria' };
+
+// ═══════════════════════ THEME ═══════════════════════
+function toggleTheme() {
+  const html = document.documentElement;
+  const dark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', dark ? 'light' : 'dark');
+  document.getElementById('themeIcon').textContent = dark ? '🌙' : '☀️';
+  document.getElementById('themeLabel').textContent = dark ? 'Escuro' : 'Claro';
+  localStorage.setItem('theme', dark ? 'light' : 'dark');
+}
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark') {
+    document.documentElement.setAttribute('data-theme','dark');
+    document.getElementById('themeIcon').textContent = '☀️';
+    document.getElementById('themeLabel').textContent = 'Claro';
+  }
+})();
+
+// ═══════════════════════ MULTISELECT DROPDOWN LOGIC ═══════════════════════
+// Ordenação sequencial solicitada: Injetoras 1-10, Sopros 1-4, Rebarbação, Montagem, Retrabalho
+const MAQUINAS_MESTRA_JS = ["injetora 1", "injetora 2", "injetora 3", "injetora 4", "injetora 5", "injetora 6", "injetora 7", "injetora 8", "injetora 9", "injetora 10", "sopro 1", "sopro 2", "sopro 3", "sopro 4", "rebarbação", "montagem", "retrabalho"];
+let MAQUINAS_ORDENADAS_JS = ["injetora 1", "injetora 2", "injetora 3", "injetora 4", "injetora 5", "injetora 7", "injetora 8", "injetora 9", "injetora 10", "sopro 1", "sopro 2", "rebarbação", "montagem", "retrabalho"];
+
+const OPCOES = {
+  ddTipoProduto: [
+    { id: 'Produto Acabado', label: 'Produto Acabado (Inj. Grandes)' },
+    { id: 'Produto Semi Acabado', label: 'Produto Semi Acabado (Inj. Peq, Sopros, Rebarbação, PU)' }
+  ],
+  ddCategoria: [
+    { id: 'Injetoras Grandes', label: 'Injetoras Grandes (1 a 5)' },
+    { id: 'Injetoras Pequenas', label: 'Injetoras Pequenas (6 a 10)' },
+    { id: 'Sopros', label: 'Sopros (1 a 4)' },
+    { id: 'Setor Rebarbação', label: 'Setor de Rebarbação' },
+    { id: 'Setor PU / Montagem', label: 'Setor PU / Montagem' }
+  ],
+  ddMaquina: MAQUINAS_ORDENADAS_JS.map(m => ({ id: m, label: m })),
+  ddTurno: [
+    { id: '1°', label: '1° Turno' },
+    { id: '2°', label: '2° Turno' },
+    { id: '3°', label: '3° Turno' }
+  ]
+};
+
+// Estado dos filtros (Sets com os IDs selecionados)
+const SEL = {};
+Object.keys(OPCOES).forEach(ddId => {
+  SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
+});
+
+function initDropdowns() {
+  Object.keys(OPCOES).forEach(ddId => {
+    const container = document.getElementById(ddId.replace('dd', 'items'));
+    let html = '';
+    OPCOES[ddId].forEach(opt => {
+      html += `<label class="dd-item">
+        <input type="checkbox" value="${opt.id}" checked onchange="onCheckChange('${ddId}')">
+        <span>${opt.label}</span>
+      </label>`;
+    });
+    container.innerHTML = html;
+  });
+  updateLabels();
+}
+
+function toggleDD(id) {
+  const target = document.getElementById(id);
+  const isOpen = target.classList.contains('open');
+  document.querySelectorAll('.dd-multiselect').forEach(d => d.classList.remove('open'));
+  if (!isOpen) target.classList.add('open');
+}
+
+// Fecha dropdowns ao clicar fora
+document.addEventListener('click', e => {
+  if (!e.target.closest('.dd-multiselect')) {
+    document.querySelectorAll('.dd-multiselect').forEach(d => d.classList.remove('open'));
+  }
+});
+
+function onCheckChange(ddId) {
+  const container = document.getElementById(ddId.replace('dd', 'items'));
+  const checked = Array.from(container.querySelectorAll('input:checked')).map(i => i.value);
+  SEL[ddId] = new Set(checked);
+  updateLabels();
+  aplicarFiltros();
+}
+
+function checkAllDD(ddId, check) {
+  const container = document.getElementById(ddId.replace('dd', 'items'));
+  container.querySelectorAll('input').forEach(i => i.checked = check);
+  onCheckChange(ddId);
+}
+
+function updateLabels() {
+  const mapaLabel = {
+    ddTipoProduto: 'lblTipoProduto',
+    ddCategoria: 'lblCategoria',
+    ddMaquina: 'lblMaquina',
+    ddTurno: 'lblTurno'
+  };
+  Object.keys(mapaLabel).forEach(ddId => {
+    const lbl = document.getElementById(mapaLabel[ddId]);
+    const total = OPCOES[ddId].length;
+    const count = SEL[ddId].size;
+    if (count === total) lbl.textContent = 'Todas (' + count + ')';
+    else if (count === 0) lbl.textContent = 'Nenhuma';
+    else lbl.textContent = count + ' / ' + total;
+  });
+}
+
+// ═══════════════════════ FILTRAGEM DINÂMICA ═══════════════════════
+function aplicarFiltros() {
+  const ini = document.getElementById('filtroInicio').value;
+  const fim = document.getElementById('filtroFim').value;
+
+  dadosFiltrados = DADOS_BRUTOS.filter(r => {
+    if (ini && r.DATA < ini) return false;
+    if (fim && r.DATA > fim) return false;
+
+    const info = getInfo(r.CT);
+    if (!SEL.ddTipoProduto.has(info.tipo)) return false;
+    if (!SEL.ddCategoria.has(info.cat)) return false;
+    if (!SEL.ddMaquina.has(r.CT)) return false;
+    if (!SEL.ddTurno.has(r.TURNO)) return false;
+
+    return true;
+  });
+  renderAll();
+}
+
+function resetarTudo() {
+  document.getElementById('filtroInicio').value = '2026-07-04';
+  document.getElementById('filtroFim').value = '2026-08-20';
+  Object.keys(OPCOES).forEach(ddId => {
+    SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
+    const container = document.getElementById(ddId.replace('dd', 'items'));
+    container.querySelectorAll('input').forEach(i => i.checked = true);
+  });
+  updateLabels();
+  dadosFiltrados = [...DADOS_BRUTOS];
+  renderAll();
+}
+
+// ═══════════════════════ UPLOAD / ATUALIZAÇÃO VIA XLSX ═══════════════════════
+let dadosPendentes = null; // dados lidos do XLSX, aguardando confirmação do usuário
+
+function normalizarDataValor(v) {
+  if (v instanceof Date) {
+    // usa componentes UTC para evitar deslocamento de fuso horário
+    const ano = v.getUTCFullYear();
+    const mes = String(v.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(v.getUTCDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  }
+  const str = String(v ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return str;
+}
+
+function parseXLSXProducao(arrayBuffer) {
+  if (typeof XLSX === 'undefined') {
+    throw new Error('Biblioteca de leitura de XLSX não carregou (é necessária conexão com a internet na primeira vez).');
+  }
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+  const nomeAba = workbook.SheetNames[0];
+  if (!nomeAba) throw new Error('A planilha não contém nenhuma aba.');
+  const planilha = workbook.Sheets[nomeAba];
+  const linhas = XLSX.utils.sheet_to_json(planilha, { raw: true, defval: '' });
+  if (!linhas.length) throw new Error('Planilha vazia ou sem linhas de dados.');
+
+  // Mapeia nomes de colunas ignorando maiúsculas/minúsculas e espaços extras
+  const mapaChaves = {};
+  Object.keys(linhas[0]).forEach(k => { mapaChaves[k.trim().toUpperCase()] = k; });
+
+  const obrigatorias = ['CT', 'DATA', 'CODIGO', 'QUANTIDADE PRODUZIDA', 'TURNO'];
+  const faltando = obrigatorias.filter(c => !(c in mapaChaves));
+  if (faltando.length > 0) {
+    throw new Error('Colunas ausentes na planilha: ' + faltando.join(', '));
+  }
+
+  const registros = linhas
+    .map(linha => ({
+      CT: String(linha[mapaChaves['CT']] ?? '').toLowerCase().trim(),
+      DATA: normalizarDataValor(linha[mapaChaves['DATA']]),
+      CODIGO: parseInt(linha[mapaChaves['CODIGO']], 10) || 0,
+      'QUANTIDADE PRODUZIDA': parseInt(linha[mapaChaves['QUANTIDADE PRODUZIDA']], 10) || 0,
+      TURNO: String(linha[mapaChaves['TURNO']] ?? '').trim()
+    }))
+    .filter(r => r.CT); // descarta linhas em branco
+
+  if (!registros.length) throw new Error('Nenhum registro válido encontrado na planilha.');
+  return registros;
+}
+
+function aplicarNovosDados(novosDados) {
+  DADOS_BRUTOS = novosDados;
+
+  // Recalcula a ordenação de máquinas com base na lista mestra
+  const maquinasPresentes = new Set(DADOS_BRUTOS.map(r => r.CT));
+  MAQUINAS_ORDENADAS_JS = MAQUINAS_MESTRA_JS.filter(m => maquinasPresentes.has(m));
+  maquinasPresentes.forEach(m => {
+    if (!MAQUINAS_ORDENADAS_JS.includes(m)) MAQUINAS_ORDENADAS_JS.push(m);
+  });
+  OPCOES.ddMaquina = MAQUINAS_ORDENADAS_JS.map(m => ({ id: m, label: m }));
+
+  // Reseta a seleção de todos os filtros para "todos marcados"
+  Object.keys(OPCOES).forEach(ddId => {
+    SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
+  });
+
+  // Atualiza o período do filtro de datas com base nos novos dados
+  const datasValidas = DADOS_BRUTOS.map(r => r.DATA).filter(Boolean).sort();
+  if (datasValidas.length) {
+    document.getElementById('filtroInicio').value = datasValidas[0];
+    document.getElementById('filtroFim').value = datasValidas[datasValidas.length - 1];
+  }
+
+  initDropdowns();
+  dadosFiltrados = [...DADOS_BRUTOS];
+  renderAll();
+}
+
+function habilitarBotaoAtualizar(habilitar) {
+  const btn = document.getElementById('atualizarBtn');
+  btn.disabled = !habilitar;
+  btn.style.opacity = habilitar ? '1' : '.5';
+  btn.style.cursor = habilitar ? 'pointer' : 'not-allowed';
+}
+
+function handleXlsxUpload(event) {
+  const arquivo = event.target.files[0];
+  const status = document.getElementById('uploadStatus');
+  if (!arquivo) return;
+
+  const leitor = new FileReader();
+  leitor.onload = function(e) {
+    try {
+      dadosPendentes = parseXLSXProducao(e.target.result);
+      status.textContent = `${dadosPendentes.length} registros prontos em "${arquivo.name}". Clique em Atualizar.`;
+      status.className = 'upload-status ok';
+      habilitarBotaoAtualizar(true);
+    } catch (err) {
+      dadosPendentes = null;
+      habilitarBotaoAtualizar(false);
+      status.textContent = 'Erro: ' + err.message;
+      status.className = 'upload-status err';
+    } finally {
+      event.target.value = '';
+    }
+  };
+  leitor.onerror = function() {
+    dadosPendentes = null;
+    habilitarBotaoAtualizar(false);
+    status.textContent = 'Erro ao ler o arquivo.';
+    status.className = 'upload-status err';
+    event.target.value = '';
+  };
+  leitor.readAsArrayBuffer(arquivo);
+}
+
+function atualizarDashboard() {
+  const status = document.getElementById('uploadStatus');
+  if (!dadosPendentes) return;
+  const qtd = dadosPendentes.length;
+  aplicarNovosDados(dadosPendentes);
+  dadosPendentes = null;
+  habilitarBotaoAtualizar(false);
+  status.textContent = `✔ Dashboard atualizado com ${qtd} registros.`;
+  status.className = 'upload-status ok';
+}
+
+// ═══════════════════════ HELPERS ═══════════════════════
+function fmt(n) { return n.toLocaleString('pt-BR'); }
+function fmtDec(n,d=1) { return n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+function groupBy(arr, keyFn, valFn) {
+  const map = {};
+  arr.forEach(r => {
+    const k = keyFn(r);
+    map[k] = (map[k]||0) + valFn(r);
+  });
+  return map;
+}
+
+function getWeekOfMonthKey(dateStr) {
+  if (!dateStr || dateStr.length < 10) return dateStr;
+  const parts = dateStr.split('-');
+  const day = parseInt(parts[2], 10);
+  const weekNum = Math.min(Math.ceil(day / 7), 4);
+  return `${parts[0]}-${parts[1]}-W${weekNum}`;
+}
+
+function fmtSemanaMesBR(weekKey) {
+  const parts = weekKey.split('-W');
+  if (parts.length === 2) {
+    const ym = parts[0].split('-');
+    return `${parts[1]}/${ym[1]}`;
+  }
+  return weekKey;
+}
+
+function getMonth(dateStr) { return dateStr.slice(0,7); }
+
+function fmtMesAnoBR(monthKey) {
+  const parts = monthKey.split('-');
+  if (parts.length === 2) {
+    return `${parts[1]}/${parts[0]}`;
+  }
+  return monthKey;
+}
+
+const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+function getDiaSemana(dateStr) {
+  return DIAS_SEMANA[new Date(dateStr + 'T00:00:00').getDay()];
+}
+
+function fmtDataBR(dateStr) {
+  if (!dateStr || dateStr.length < 10) return dateStr;
+  const parts = dateStr.split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return dateStr;
+}
+
+function fmtDiaMesBR(dateStr) {
+  if (!dateStr || dateStr.length < 10) return dateStr;
+  const parts = dateStr.split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}`;
+  return dateStr;
+}
+
+// ═══════════════════════ TOOLTIP FLUTUANTE & PRODUTOS ═══════════════════════
+const tip = document.getElementById('tooltip');
+const chartDataStore = {};
+
+function getProdutosPorGrupo(records, keyFn) {
+  const map = {};
+  records.forEach(r => {
+    const k = keyFn(r);
+    const cod = String(r.CODIGO || 'Sem código');
+    const qtd = Number(r['QUANTIDADE PRODUZIDA']) || 0;
+    if (!map[k]) map[k] = {};
+    map[k][cod] = (map[k][cod] || 0) + qtd;
+  });
+  const result = {};
+  Object.keys(map).forEach(k => {
+    result[k] = Object.entries(map[k])
+      .map(([codigo, quantidade]) => ({ codigo, quantidade }))
+      .sort((a, b) => b.quantidade - a.quantidade);
+  });
+  return result;
+}
+
+function showBarTip(e, containerId, idx) {
+  const item = chartDataStore[containerId] && chartDataStore[containerId][idx];
+  if (!item) return;
+
+  const title = item.fullLabel || item.label;
+  let html = `<div class="tip-header">
+    <span class="tip-title">${title}</span>
+    <span class="tip-total">${fmt(item.value)} un.</span>
+  </div>`;
+
+  if (item.turnos && item.turnos.length > 0) {
+    html += `<div class="tip-subtitle">Por Turno</div>`;
+    html += `<div class="tip-list">`;
+    item.turnos.forEach(t => {
+      html += `<div class="tip-item">
+        <span class="tip-item-name" style="display:flex;align-items:center;gap:6px">
+          <span class="turno-legend-swatch t${t.n}"></span>${t.turno}
+        </span>
+        <span class="tip-item-val">${fmt(t.value)} un.</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (item.produtos && item.produtos.length > 0) {
+    const prodsValidos = item.produtos.filter(p => p.quantidade > 0);
+    const lista = prodsValidos.length > 0 ? prodsValidos : item.produtos;
+
+    html += `<div class="tip-subtitle">Produtos Produzidos (${lista.length})</div>`;
+    html += `<div class="tip-list">`;
+    lista.forEach(p => {
+      html += `<div class="tip-item">
+        <span class="tip-item-name">Cód. ${p.codigo}</span>
+        <span class="tip-item-val">${fmt(p.quantidade)} un.</span>
+      </div>`;
+    });
+    html += `</div>`;
+  } else {
+    html += `<div class="tip-item" style="color:var(--text-sub)">Nenhum produto registrado</div>`;
+  }
+
+  showTipHtml(e, html);
+}
+
+function showTipHtml(e, htmlContent) {
+  tip.innerHTML = htmlContent;
+  tip.classList.add('show');
+  positionTip(e);
+}
+
+function moveTip(e) {
+  if (tip.classList.contains('show')) {
+    positionTip(e);
+  }
+}
+
+function positionTip(e) {
+  const gap = 14;
+  let left = e.clientX + gap;
+  let top = e.clientY + gap;
+
+  const tipRect = tip.getBoundingClientRect();
+  const winW = window.innerWidth;
+  const winH = window.innerHeight;
+
+  if (left + tipRect.width > winW - 10) {
+    left = e.clientX - tipRect.width - gap;
+  }
+  if (top + tipRect.height > winH - 10) {
+    top = e.clientY - tipRect.height - gap;
+  }
+  if (left < 10) left = 10;
+  if (top < 10) top = 10;
+
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
+}
+
+function hideTip() {
+  tip.classList.remove('show');
+}
+
+// ═══════════════════════ RENDER KPIs ═══════════════════════
+function renderKPIs() {
+  const d = dadosFiltrados;
+  if (!d.length) { document.getElementById('kpiGrid').innerHTML = '<div class="no-data">Sem dados com os filtros selecionados</div>'; return; }
+
+  const total = d.reduce((s,r) => s + r['QUANTIDADE PRODUZIDA'], 0);
+  const dias = [...new Set(d.map(r => r.DATA))];
+  const mediaDia = total / (dias.length || 1);
+  const maqMap = groupBy(d, r=>r.CT, r=>r['QUANTIDADE PRODUZIDA']);
+  const topMaq = Object.entries(maqMap).sort((a,b)=>b[1]-a[1])[0];
+  const turMap = groupBy(d, r=>r.TURNO, r=>r['QUANTIDADE PRODUZIDA']);
+  const topTur = Object.entries(turMap).sort((a,b)=>b[1]-a[1])[0];
+  const diaMap = groupBy(d, r=>r.DATA, r=>r['QUANTIDADE PRODUZIDA']);
+  const topDia = Object.entries(diaMap).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Produção Total</div>
+      <div class="kpi-value">${fmt(total)}</div>
+      <div class="kpi-sub">${fmt(d.length)} registros</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Média Diária</div>
+      <div class="kpi-value">${fmtDec(mediaDia,0)}</div>
+      <div class="kpi-sub">${dias.length} dias ativas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Top Máquina</div>
+      <div class="kpi-value">${topMaq ? topMaq[0] : '-'}</div>
+      <div class="kpi-sub">${topMaq ? fmt(topMaq[1]) + ' un.' : '-'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Top Turno</div>
+      <div class="kpi-value">${topTur ? topTur[0] : '-'}</div>
+      <div class="kpi-sub">${topTur ? fmt(topTur[1]) + ' un.' : '-'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Dia Recorde</div>
+      <div class="kpi-value">${topDia ? fmtDiaMesBR(topDia[0]) : '-'}</div>
+      <div class="kpi-sub">${topDia ? fmt(topDia[1]) + ' un.' : '-'}</div>
+    </div>
+  `;
+}
+
+// ═══════════════════════ VERTICAL BAR CHART ═══════════════════════
+function renderVerticalBars(containerId, data) {
+  const container = document.getElementById(containerId);
+  if (!data.length) { container.innerHTML = '<div class="no-data">Sem dados com os filtros selecionados</div>'; return; }
+
+  chartDataStore[containerId] = data;
+  const maxVal = Math.max(...data.map(d=>d.value), 1);
+  const barH = 240;
+
+  let html = '<div class="bar-chart">';
+  data.forEach((item, idx) => {
+    const h = Math.max((item.value / maxVal) * barH, 2);
+    html += `<div class="bar-col">
+      <div class="bar-val">${fmt(item.value)}</div>
+      <div class="bar" style="height:${h}px"
+           onmouseenter="showBarTip(event, '${containerId}', ${idx})"
+           onmousemove="moveTip(event)"
+           onmouseleave="hideTip()"></div>
+      <div class="bar-label" title="${item.label}">${item.label}</div>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ═══════════════════════ VERTICAL STACKED BAR CHART (POR TURNO) ═══════════════════════
+function renderStackedBars(containerId, data) {
+  const container = document.getElementById(containerId);
+  if (!data.length) { container.innerHTML = '<div class="no-data">Sem dados com os filtros selecionados</div>'; return; }
+
+  chartDataStore[containerId] = data;
+  const maxVal = Math.max(...data.map(d=>d.value), 1);
+  const barH = 240;
+
+  let html = '<div class="bar-chart">';
+  data.forEach((item, idx) => {
+    const totalH = Math.max((item.value / maxVal) * barH, 2);
+    let segsHtml = '';
+    item.turnos.forEach(t => {
+      const segH = item.value > 0 ? (t.value / item.value) * totalH : 0;
+      segsHtml += `<div class="bar-seg t${t.n}" style="height:${segH}px" title="${t.turno}: ${fmt(t.value)} un."></div>`;
+    });
+    html += `<div class="bar-col">
+      <div class="bar-val">${fmt(item.value)}</div>
+      <div class="bar-stack" style="height:${totalH}px"
+           onmouseenter="showBarTip(event, '${containerId}', ${idx})"
+           onmousemove="moveTip(event)"
+           onmouseleave="hideTip()">${segsHtml}</div>
+      <div class="bar-label" title="${item.label}">${item.label}</div>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ═══════════════════════ HORIZONTAL BAR CHART ═══════════════════════
+function renderHorizontalBars(containerId, data) {
+  const container = document.getElementById(containerId);
+  if (!data.length) { container.innerHTML = '<div class="no-data">Sem dados com os filtros selecionados</div>'; return; }
+
+  chartDataStore[containerId] = data;
+  const maxVal = Math.max(...data.map(d=>d.value), 1);
+
+  let html = '';
+  data.forEach((item, idx) => {
+    const pct = Math.max((item.value / maxVal) * 100, 1);
+    html += `<div class="h-bar-row"
+                  onmouseenter="showBarTip(event, '${containerId}', ${idx})"
+                  onmousemove="moveTip(event)"
+                  onmouseleave="hideTip()">
+      <div class="h-bar-name" title="${item.label}">${item.label}</div>
+      <div class="h-bar-track">
+        <div class="h-bar-fill" style="width:${pct}%">${fmt(item.value)}</div>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ═══════════════════════ TAB SWITCH ═══════════════════════
+function setTab(btn, group) {
+  btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  tabAtiva[group] = btn.dataset.tab;
+  if (group === 'periodo') renderChartPeriodo();
+}
+
+// Ordem e rótulos fixos dos turnos para empilhamento (1° embaixo, 3° em cima)
+const TURNOS_ORDEM = [{ turno: '1°', n: 1 }, { turno: '2°', n: 2 }, { turno: '3°', n: 3 }];
+
+// ═══════════════════════ RENDER: PERIODO ═══════════════════════
+function renderChartPeriodo() {
+  const legenda = document.getElementById('legendaPeriodo');
+  let keyFn, fmtFn;
+  if (tabAtiva.periodo === 'diaria') {
+    keyFn = r => r.DATA;
+    fmtFn = fmtDiaMesBR;
+  } else if (tabAtiva.periodo === 'semanal') {
+    keyFn = r => getWeekOfMonthKey(r.DATA);
+    fmtFn = fmtSemanaMesBR;
+  } else {
+    keyFn = r => getMonth(r.DATA);
+    fmtFn = fmtMesAnoBR;
+  }
+  const produtosMap = getProdutosPorGrupo(dadosFiltrados, keyFn);
+
+  if (tabAtiva.periodo === 'diaria') {
+    // Empilha os 3 turnos em uma única barra por dia
+    const map = groupBy(dadosFiltrados, r => keyFn(r), r => r['QUANTIDADE PRODUZIDA']);
+    const turnoMap = {};
+    dadosFiltrados.forEach(r => {
+      const k = keyFn(r);
+      if (!turnoMap[k]) turnoMap[k] = {};
+      turnoMap[k][r.TURNO] = (turnoMap[k][r.TURNO] || 0) + r['QUANTIDADE PRODUZIDA'];
+    });
+    const sorted = Object.entries(map).sort((a,b) => a[0].localeCompare(b[0]));
+    const data = sorted.map(([k,v]) => ({
+      label: fmtFn(k),
+      fullLabel: 'Data: ' + fmtDataBR(k),
+      value: v,
+      turnos: TURNOS_ORDEM.map(t => ({ turno: t.turno, n: t.n, value: (turnoMap[k] && turnoMap[k][t.turno]) || 0 })),
+      produtos: produtosMap[k] || []
+    }));
+    legenda.innerHTML = TURNOS_ORDEM.map(t => `
+      <span class="turno-legend-item">
+        <span class="turno-legend-swatch t${t.n}"></span>${t.turno} Turno
+      </span>`).join('');
+    renderStackedBars('chartPeriodo', data);
+  } else {
+    const map = groupBy(dadosFiltrados, r => keyFn(r), r => r['QUANTIDADE PRODUZIDA']);
+    const sorted = Object.entries(map).sort((a,b) => a[0].localeCompare(b[0]));
+    const data = sorted.map(([k,v]) => ({
+      label: fmtFn(k),
+      fullLabel: tabAtiva.periodo === 'semanal' ? 'Semana ' + fmtSemanaMesBR(k) : fmtMesAnoBR(k),
+      value: v,
+      produtos: produtosMap[k] || []
+    }));
+    legenda.innerHTML = '';
+    renderVerticalBars('chartPeriodo', data);
+  }
+}
+
+// ═══════════════════════ RENDER: CATEGORIES ═══════════════════════
+function renderChartMaquina() {
+  const map = groupBy(dadosFiltrados, r=>r.CT, r=>r['QUANTIDADE PRODUZIDA']);
+  const produtosMap = getProdutosPorGrupo(dadosFiltrados, r=>r.CT);
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const data = sorted.map(([k,v]) => ({
+    label: k,
+    fullLabel: 'Máquina: ' + k,
+    value: v,
+    produtos: produtosMap[k] || []
+  }));
+  renderHorizontalBars('chartMaquina', data);
+}
+
+function renderChartTurno() {
+  const map = groupBy(dadosFiltrados, r=>r.TURNO, r=>r['QUANTIDADE PRODUZIDA']);
+  const produtosMap = getProdutosPorGrupo(dadosFiltrados, r=>r.TURNO);
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const data = sorted.map(([k,v]) => ({
+    label: k,
+    fullLabel: 'Turno: ' + k,
+    value: v,
+    produtos: produtosMap[k] || []
+  }));
+  renderHorizontalBars('chartTurno', data);
+}
+
+function renderChartDiaSemana() {
+  const order = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  const map = groupBy(dadosFiltrados, r=>getDiaSemana(r.DATA), r=>r['QUANTIDADE PRODUZIDA']);
+  const produtosMap = getProdutosPorGrupo(dadosFiltrados, r=>getDiaSemana(r.DATA));
+  const data = order.filter(d => map[d]).map(d => ({
+    label: d,
+    fullLabel: 'Dia: ' + d,
+    value: map[d],
+    produtos: produtosMap[d] || []
+  }));
+  renderHorizontalBars('chartDiaSemana', data);
+}
+
+// ═══════════════════════ RENDER: RANKING ═══════════════════════
+function renderRanking() {
+  const container = document.getElementById('rankingTable');
+  const map = groupBy(dadosFiltrados, r=>r.CT, r=>r['QUANTIDADE PRODUZIDA']);
+  const regMap = groupBy(dadosFiltrados, r=>r.CT, r=>1);
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  if (!sorted.length) { container.innerHTML = '<div class="no-data">Sem máquinas ativas com os filtros selecionados</div>'; return; }
+
+  const maxVal = sorted[0][1] || 1;
+
+  let html = `<table class="rank-table">
+    <thead><tr>
+      <th style="width:50px">#</th>
+      <th>Máquina</th>
+      <th>Categoria / Tipo</th>
+      <th style="text-align:right">Total</th>
+      <th style="text-align:right">Média por Reg.</th>
+      <th style="text-align:right">Registros</th>
+      <th class="rank-bar-cell">Proporção</th>
+    </tr></thead><tbody>`;
+
+  sorted.forEach(([maq, total], i) => {
+    const regs = regMap[maq] || 1;
+    const media = total / regs;
+    const pct = (total / maxVal) * 100;
+    const rc = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
+    const info = getInfo(maq);
+    html += `<tr>
+      <td><span class="rank-num ${rc}">${i+1}</span></td>
+      <td style="font-weight:600">${maq}</td>
+      <td style="font-size:.78rem;color:var(--text-sub)">${info.cat} • ${info.tipo}</td>
+      <td style="text-align:right;font-weight:700">${fmt(total)}</td>
+      <td style="text-align:right">${fmtDec(media,0)}</td>
+      <td style="text-align:right">${regs}</td>
+      <td class="rank-bar-cell">
+        <div class="rank-bar-bg"><div class="rank-bar-fg" style="width:${pct}%"></div></div>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ═══════════════════════ RENDER ALL ═══════════════════════
+function renderAll() {
+  renderKPIs();
+  renderChartPeriodo();
+  renderChartMaquina();
+  renderChartTurno();
+  renderChartDiaSemana();
+  renderRanking();
+}
+
+// Init
+initDropdowns();
+renderAll();
+</script>
+</body>
+</html>
