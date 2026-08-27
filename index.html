@@ -742,6 +742,14 @@ async function carregarDadosDaNuvem() {
 
     if (producaoNuvem.length > 0 || refugoNuvem.length > 0) {
       recalcularMaquinasOrdenadas();
+
+      // Reseta a seleção interna de todos os filtros para acompanhar a nova
+      // lista de máquinas/opções (sem isso, o filtro "Máquinas" ficava com
+      // menos itens marcados internamente do que realmente existem).
+      Object.keys(OPCOES).forEach(ddId => {
+        SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
+      });
+
       const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(Boolean);
       const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(Boolean);
       const datasValidas = [...datasProducao, ...datasRefugo].sort();
@@ -803,6 +811,80 @@ function normalizarDataValor(v) {
   return str;
 }
 
+// ═══════════════════════ LIMPEZA DE DADOS (baseada no limpeza.py) ═══════════════════════
+// Replica a lógica do script Python de limpeza: remove linhas duplicadas
+// (mantém a primeira ocorrência) e corrige datas com ano fora do padrão,
+// substituindo o ano pelo ano da linha imediatamente anterior.
+
+function removerDuplicatasExatas(registros) {
+  const vistos = new Set();
+  const resultado = [];
+  registros.forEach(r => {
+    const chave = JSON.stringify(r);
+    if (!vistos.has(chave)) {
+      vistos.add(chave);
+      resultado.push(r);
+    }
+  });
+  return { registros: resultado, removidas: registros.length - resultado.length };
+}
+
+function detectarAnoPredominante(datas) {
+  const contagem = {};
+  datas.forEach(d => {
+    if (!d || d.length < 4) return;
+    const ano = d.slice(0, 4);
+    contagem[ano] = (contagem[ano] || 0) + 1;
+  });
+  let anoPredominante = null, max = -1;
+  Object.entries(contagem).forEach(([ano, qtd]) => {
+    if (qtd > max) { max = qtd; anoPredominante = ano; }
+  });
+  return anoPredominante;
+}
+
+function corrigirAnoNaData(dataStr, anoCorreto) {
+  if (!dataStr || dataStr.length < 10) return dataStr;
+  const [, mes, dia] = dataStr.split('-');
+  const anoNum = parseInt(anoCorreto, 10);
+  const mesNum = parseInt(mes, 10);
+  let diaNum = parseInt(dia, 10);
+  // Trata 29/fev em ano não-bissexto, igual ao script Python
+  const bissexto = (anoNum % 4 === 0 && anoNum % 100 !== 0) || (anoNum % 400 === 0);
+  if (mesNum === 2 && diaNum === 29 && !bissexto) diaNum = 28;
+  return `${anoCorreto}-${mes}-${String(diaNum).padStart(2, '0')}`;
+}
+
+function corrigirDatasAnomalas(registros) {
+  if (!registros.length) return { registros, corrigidas: 0 };
+  const anoPredominante = detectarAnoPredominante(registros.map(r => r.DATA));
+  if (!anoPredominante) return { registros, corrigidas: 0 };
+
+  let corrigidas = 0;
+  const resultado = registros.map(r => ({ ...r }));
+  resultado.forEach((r, idx) => {
+    if (!r.DATA || r.DATA.length < 10) return;
+    const ano = r.DATA.slice(0, 4);
+    if (ano !== anoPredominante) {
+      // usa o ano da linha anterior (já corrigida, se for o caso), igual ao script Python
+      const anoAnterior = idx > 0 ? resultado[idx - 1].DATA.slice(0, 4) : anoPredominante;
+      r.DATA = corrigirAnoNaData(r.DATA, anoAnterior);
+      corrigidas++;
+    }
+  });
+  return { registros: resultado, corrigidas };
+}
+
+function limparRegistrosProducao(registros) {
+  const semDuplicatas = removerDuplicatasExatas(registros);
+  const semAnomaliasDeData = corrigirDatasAnomalas(semDuplicatas.registros);
+  return {
+    registros: semAnomaliasDeData.registros,
+    duplicatasRemovidas: semDuplicatas.removidas,
+    datasCorrigidas: semAnomaliasDeData.corrigidas
+  };
+}
+
 function parseXLSXProducao(arrayBuffer) {
   if (typeof XLSX === 'undefined') {
     throw new Error('Biblioteca de leitura de XLSX não carregou (é necessária conexão com a internet na primeira vez).');
@@ -836,7 +918,7 @@ function parseXLSXProducao(arrayBuffer) {
     .filter(r => r.CT); // descarta linhas em branco
 
   if (!registros.length) throw new Error('Nenhum registro válido encontrado na planilha de produção.');
-  return registros;
+  return limparRegistrosProducao(registros);
 }
 
 function parseXLSXRefugo(arrayBuffer) {
@@ -937,8 +1019,14 @@ function handleXlsxUploadProducao(event) {
   const leitor = new FileReader();
   leitor.onload = function(e) {
     try {
-      dadosPendentesProducao = parseXLSXProducao(e.target.result);
-      status.textContent = `Produção: ${dadosPendentesProducao.length} registros prontos ("${arquivo.name}").`;
+      const resultado = parseXLSXProducao(e.target.result);
+      dadosPendentesProducao = resultado.registros;
+
+      let detalhes = '';
+      if (resultado.duplicatasRemovidas > 0) detalhes += ` · ${resultado.duplicatasRemovidas} duplicata(s) removida(s)`;
+      if (resultado.datasCorrigidas > 0) detalhes += ` · ${resultado.datasCorrigidas} data(s) corrigida(s)`;
+
+      status.textContent = `Produção: ${dadosPendentesProducao.length} registros prontos ("${arquivo.name}")${detalhes}.`;
       status.className = 'upload-status ok';
       habilitarBotaoAtualizar();
     } catch (err) {
