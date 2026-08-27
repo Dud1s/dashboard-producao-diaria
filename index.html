@@ -730,7 +730,10 @@ async function carregarDadosDaNuvem() {
   if (!WEBAPP_URL) return;
   try {
     if (statusSync) { statusSync.textContent = '☁️ Carregando dados da nuvem...'; statusSync.className = 'upload-status'; }
-    const resp = await fetch(WEBAPP_URL, { method: 'GET' });
+    // "cache: 'no-store'" + parâmetro único evitam que o navegador reutilize
+    // uma resposta antiga em cache em vez de buscar os dados atuais da planilha.
+    const urlSemCache = WEBAPP_URL + (WEBAPP_URL.includes('?') ? '&' : '?') + '_=' + Date.now();
+    const resp = await fetch(urlSemCache, { method: 'GET', cache: 'no-store' });
     if (!resp.ok) throw new Error('Resposta HTTP ' + resp.status);
     const json = await resp.json();
 
