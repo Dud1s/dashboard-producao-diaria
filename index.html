@@ -825,6 +825,10 @@ function normalizarDataValor(v) {
     return `${ano}-${mes}-${dia}`;
   }
   const str = String(v ?? '').trim();
+  // Caso chegue um datetime completo (ex: "2026-08-07T03:00:00.000Z"),
+  // usa só a parte da data, descartando hora/fuso.
+  const dataComHora = str.match(/^(\d{4}-\d{2}-\d{2})T/);
+  if (dataComHora) return dataComHora[1];
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
   const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
@@ -1493,7 +1497,7 @@ function renderChartPeriodo() {
     const sorted = Object.entries(map).sort((a,b) => a[0].localeCompare(b[0]));
     // Corta para os últimos 15 dias apenas quando o filtro de data está no período completo (padrão).
     // Se o usuário restringiu manualmente o intervalo De/Até, mostra todos os dias desse intervalo.
-    const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(Boolean).sort();
+    const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida).sort();
     const extremoMin = datasProducao[0];
     const extremoMax = datasProducao[datasProducao.length - 1];
     const filtroIni = document.getElementById('filtroInicio').value;
