@@ -760,6 +760,13 @@ async function carregarDadosDaNuvem() {
         document.getElementById('filtroInicio').value = datasValidas[0];
         document.getElementById('filtroFim').value = datasValidas[datasValidas.length - 1];
       }
+
+      // CRÍTICO: sem isso, o dashboard continuava desenhando com os dados
+      // "congelados" do carregamento inicial da página, ignorando os dados
+      // novos vindos da nuvem, mesmo com DADOS_BRUTOS/REFUGO_BRUTOS corretos.
+      dadosFiltrados = [...DADOS_BRUTOS];
+      refugoFiltrado = [...REFUGO_BRUTOS];
+
       if (statusSync) { statusSync.textContent = '☁️ Dados sincronizados da nuvem.'; statusSync.className = 'upload-status ok'; }
     } else {
       if (statusSync) { statusSync.textContent = '☁️ Planilha vazia, usando dados locais.'; statusSync.className = 'upload-status'; }
