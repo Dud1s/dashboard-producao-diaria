@@ -694,8 +694,13 @@ function aplicarFiltros() {
 }
 
 function resetarTudo() {
-  document.getElementById('filtroInicio').value = '2026-06-05';
-  document.getElementById('filtroFim').value = '2026-08-24';
+  const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
+  const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
+  const datasValidas = [...datasProducao, ...datasRefugo].sort();
+  if (datasValidas.length) {
+    document.getElementById('filtroInicio').value = datasValidas[0];
+    document.getElementById('filtroFim').value = datasValidas[datasValidas.length - 1];
+  }
   document.getElementById('campoBusca').value = '';
   Object.keys(OPCOES).forEach(ddId => {
     SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
