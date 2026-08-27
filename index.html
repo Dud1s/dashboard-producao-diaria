@@ -104,6 +104,12 @@ body{
   transition:border-color .2s;
 }
 .filter-bar input[type=date]:focus{outline:none;border-color:var(--accent)}
+.filter-bar input[type=text]{
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:7px 12px;color:var(--text);font-size:.88rem;
+  transition:border-color .2s;width:200px;
+}
+.filter-bar input[type=text]:focus{outline:none;border-color:var(--accent)}
 
 .btn-reset{
   background:transparent;color:var(--text-sub);border:1px solid var(--border);
@@ -443,6 +449,11 @@ body{
       </div>
     </div>
 
+    <div class="filter-group">
+      <label>Buscar:</label>
+      <input type="text" id="campoBusca" placeholder="Código do item ou setor..." oninput="aplicarFiltros()">
+    </div>
+
     <button class="btn-reset" onclick="resetarTudo()">Limpar Filtros</button>
   </div>
 
@@ -649,6 +660,7 @@ function updateLabels() {
 function aplicarFiltros() {
   const ini = document.getElementById('filtroInicio').value;
   const fim = document.getElementById('filtroFim').value;
+  const busca = document.getElementById('campoBusca').value.trim().toLowerCase();
 
   dadosFiltrados = DADOS_BRUTOS.filter(r => {
     if (ini && r.DATA < ini) return false;
@@ -659,6 +671,7 @@ function aplicarFiltros() {
     if (!SEL.ddCategoria.has(info.cat)) return false;
     if (!SEL.ddMaquina.has(r.CT)) return false;
     if (!SEL.ddTurno.has(r.TURNO)) return false;
+    if (busca && !String(r.CODIGO).toLowerCase().includes(busca) && !r.CT.includes(busca)) return false;
 
     return true;
   });
@@ -672,6 +685,7 @@ function aplicarFiltros() {
     if (!SEL.ddCategoria.has(info.cat)) return false;
     if (!SEL.ddMaquina.has(r.SETOR)) return false;
     if (!SEL.ddTurno.has(r.TURNO)) return false;
+    if (busca && !String(r['CODIGO DO PRODUTO']).toLowerCase().includes(busca) && !r.SETOR.includes(busca)) return false;
 
     return true;
   });
@@ -682,6 +696,7 @@ function aplicarFiltros() {
 function resetarTudo() {
   document.getElementById('filtroInicio').value = '2026-06-05';
   document.getElementById('filtroFim').value = '2026-08-24';
+  document.getElementById('campoBusca').value = '';
   Object.keys(OPCOES).forEach(ddId => {
     SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
     const container = document.getElementById(ddId.replace('dd', 'items'));
@@ -1656,7 +1671,7 @@ function renderChartItensRefugo() {
   const breakdown = getBreakdownPorGrupo(
     refugoFiltrado, r => String(r['CODIGO DO PRODUTO']), r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']
   );
-  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 15);
   const data = sorted.map(([k, v]) => ({
     label: k,
     fullLabel: 'Código: ' + k,
