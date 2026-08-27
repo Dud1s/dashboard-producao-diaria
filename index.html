@@ -750,8 +750,8 @@ async function carregarDadosDaNuvem() {
         SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
       });
 
-      const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(Boolean);
-      const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(Boolean);
+      const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
+      const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
       const datasValidas = [...datasProducao, ...datasRefugo].sort();
       if (datasValidas.length) {
         document.getElementById('filtroInicio').value = datasValidas[0];
@@ -804,11 +804,30 @@ function normalizarDataValor(v) {
     const dia = String(v.getUTCDate()).padStart(2, '0');
     return `${ano}-${mes}-${dia}`;
   }
+  // Número de série de data (Excel/Sheets), caso a célula não tenha sido
+  // reconhecida como data e volte como número puro em vez de texto.
+  if (typeof v === 'number' && isFinite(v) && v > 0) {
+    const dataBase = new Date(Date.UTC(1899, 11, 30));
+    const dataConvertida = new Date(dataBase.getTime() + v * 86400000);
+    const ano = dataConvertida.getUTCFullYear();
+    const mes = String(dataConvertida.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(dataConvertida.getUTCDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  }
   const str = String(v ?? '').trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
   const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
   return str;
+}
+
+// Confirma que a string está no formato AAAA-MM-DD e é uma data real,
+// para nunca atribuir um valor inválido/estranho aos campos De/Até
+// (o navegador simplesmente esvazia o campo quando isso acontece).
+function ehDataISOValida(str) {
+  if (typeof str !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+  const d = new Date(str + 'T00:00:00Z');
+  return !isNaN(d.getTime());
 }
 
 // ═══════════════════════ LIMPEZA DE DADOS (baseada no limpeza.py) ═══════════════════════
@@ -989,8 +1008,8 @@ function aplicarNovosDados({ producao, refugo }) {
   });
 
   // Atualiza o período do filtro de datas considerando os dois datasets
-  const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(Boolean);
-  const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(Boolean);
+  const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
+  const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
   const datasValidas = [...datasProducao, ...datasRefugo].sort();
   if (datasValidas.length) {
     document.getElementById('filtroInicio').value = datasValidas[0];
