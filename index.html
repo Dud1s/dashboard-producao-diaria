@@ -2171,10 +2171,22 @@ function renderAll() {
   renderChartItensRefugo();
 }
 
+// Define o filtro de datas para o mês atual (do dia 1 até hoje), com base
+// na data real do dispositivo de quem está acessando.
+function aplicarFiltroMesAtual() {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoje.getDate()).padStart(2, '0');
+  document.getElementById('filtroInicio').value = `${ano}-${mes}-01`;
+  document.getElementById('filtroFim').value = `${ano}-${mes}-${dia}`;
+}
+
 // Init
 carregarDadosDaNuvem().finally(() => {
   initDropdowns();
-  renderAll();
+  aplicarFiltroMesAtual();
+  aplicarFiltros(); // reaplica os filtros já com o período do mês atual (e chama renderAll())
 });
 </script>
 </body>
