@@ -342,9 +342,56 @@ body{
 .no-data{
   text-align:center;padding:40px;color:var(--text-sub);font-style:italic;
 }
+
+/* ── Modal de Detalhes ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:none;align-items:center;justify-content:center;
+  z-index:10000;padding:20px;
+}
+.modal-overlay.show{display:flex}
+.modal-box{
+  background:var(--bg-card-s);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
+  border:1px solid var(--border);border-radius:16px;
+  padding:24px;max-width:640px;width:100%;max-height:80vh;overflow-y:auto;
+  box-shadow:var(--shadow-lg);
+}
+.modal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);
+}
+.modal-title{font-size:1.05rem;font-weight:700;color:var(--text)}
+.modal-close{
+  cursor:pointer;background:var(--bar-bg);border:none;border-radius:50%;
+  width:28px;height:28px;font-size:.95rem;color:var(--text);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.modal-close:hover{background:var(--accent);color:#fff}
+.modal-dia{margin-bottom:18px}
+.modal-dia-header{
+  font-weight:700;font-size:.85rem;margin-bottom:8px;padding-bottom:6px;
+  border-bottom:1px solid var(--border);display:flex;justify-content:space-between;
+  color:var(--text);
+}
+.modal-dia-header .total{color:var(--accent)}
+.modal-evento{
+  display:flex;justify-content:space-between;gap:10px;
+  padding:6px 10px;border-radius:6px;background:var(--bar-bg);
+  margin-bottom:4px;font-size:.82rem;color:var(--text);
+}
+.modal-evento .val{color:var(--accent);font-weight:700;white-space:nowrap}
 </style>
 </head>
 <body>
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this) fecharModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitulo"></div>
+      <button class="modal-close" onclick="fecharModal()">✕</button>
+    </div>
+    <div id="modalConteudo"></div>
+  </div>
+</div>
 <div class="tooltip" id="tooltip"></div>
 <div class="wrapper">
 
@@ -365,6 +412,13 @@ body{
         <span>Carregar XLSX Refugo</span>
       </button>
       <span class="upload-status" id="uploadStatusRefugo"></span>
+
+      <input type="file" id="xlsxUploadParadas" accept=".xlsx,.xls" style="display:none" onchange="handleXlsxUploadParadas(event)">
+      <button class="theme-btn" id="uploadBtnParadas" onclick="document.getElementById('xlsxUploadParadas').click()">
+        <span class="theme-icon">⏸️</span>
+        <span>Carregar XLSX Paradas</span>
+      </button>
+      <span class="upload-status" id="uploadStatusParadas"></span>
 
       <button class="theme-btn" id="atualizarBtn" onclick="atualizarDashboard()" disabled style="opacity:.5;cursor:not-allowed">
         <span class="theme-icon">🔄</span>
@@ -488,6 +542,25 @@ body{
     </div>
   </div>
 
+  <!-- Indicadores de Paradas -->
+  <div class="card">
+    <div class="card-title">Indicadores de Paradas de Máquina</div>
+    <div class="grid-3">
+      <div>
+        <div class="subcard-title">Máquina que Mais Fica Parada</div>
+        <div id="chartMaquinaParada" class="chart-container"></div>
+      </div>
+      <div>
+        <div class="subcard-title">Maior Motivo de Parada</div>
+        <div id="chartMotivoParada" class="chart-container"></div>
+      </div>
+      <div>
+        <div class="subcard-title">Turno com Mais Máquina Parada</div>
+        <div id="chartTurnoParada" class="chart-container"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Indicadores de Refugo -->
   <div class="card">
     <div class="card-title">Indicadores de Refugo</div>
@@ -545,6 +618,9 @@ function getInfo(maq) {
 
 let dadosFiltrados = [...DADOS_BRUTOS];
 let refugoFiltrado = [...REFUGO_BRUTOS];
+// Paradas ainda não tem dados embutidos no arquivo — só é populado via upload de XLSX.
+let PARADAS_BRUTOS = [];
+let paradasFiltrado = [...PARADAS_BRUTOS];
 let tabAtiva = { periodo: 'diaria' };
 
 // ═══════════════════════ THEME ═══════════════════════
@@ -690,13 +766,28 @@ function aplicarFiltros() {
     return true;
   });
 
+  paradasFiltrado = PARADAS_BRUTOS.filter(r => {
+    if (ini && r.DATA < ini) return false;
+    if (fim && r.DATA > fim) return false;
+
+    const info = getInfo(r.CT);
+    if (!SEL.ddTipoProduto.has(info.tipo)) return false;
+    if (!SEL.ddCategoria.has(info.cat)) return false;
+    if (!SEL.ddMaquina.has(r.CT)) return false;
+    if (!SEL.ddTurno.has(r.TURNO)) return false;
+    if (busca && !String(r['CODIGO DO PRODUTO']).toLowerCase().includes(busca) && !r.CT.includes(busca)) return false;
+
+    return true;
+  });
+
   renderAll();
 }
 
 function resetarTudo() {
   const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
   const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
-  const datasValidas = [...datasProducao, ...datasRefugo].sort();
+  const datasParadas = PARADAS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
+  const datasValidas = [...datasProducao, ...datasRefugo, ...datasParadas].sort();
   if (datasValidas.length) {
     document.getElementById('filtroInicio').value = datasValidas[0];
     document.getElementById('filtroFim').value = datasValidas[datasValidas.length - 1];
@@ -710,6 +801,7 @@ function resetarTudo() {
   updateLabels();
   dadosFiltrados = [...DADOS_BRUTOS];
   refugoFiltrado = [...REFUGO_BRUTOS];
+  paradasFiltrado = [...PARADAS_BRUTOS];
   renderAll();
 }
 
@@ -742,6 +834,22 @@ function normalizarRefugoDaNuvem(registros) {
     .filter(r => r.SETOR);
 }
 
+function normalizarParadasDaNuvem(registros) {
+  return (registros || [])
+    .map(r => ({
+      OP: (r.OP === '' || r.OP === undefined) ? null : r.OP,
+      CT: String(r.CT ?? '').toLowerCase().trim(),
+      DATA: normalizarDataValor(r.DATA),
+      'CODIGO DO PRODUTO': parseInt(r['CODIGO DO PRODUTO'], 10) || 0,
+      TURNO: String(r.TURNO ?? '').trim(),
+      'CODIGO DA PARADA': parseInt(r['CODIGO DA PARADA'], 10) || 0,
+      'DESCRICAO DA PARADA': String(r['DESCRICAO DA PARADA'] ?? '').trim(),
+      'INICIO DA PARADA': normalizarHoraValor(r['INICIO DA PARADA']),
+      'FINAL DA PARADA': normalizarHoraValor(r['FINAL DA PARADA'])
+    }))
+    .filter(r => r.CT);
+}
+
 // Busca os dados mais recentes da planilha ao abrir a página.
 // Se falhar (offline, URL não configurada, planilha vazia), mantém os dados
 // embutidos no arquivo como reserva, e o dashboard continua funcionando normalmente.
@@ -759,11 +867,13 @@ async function carregarDadosDaNuvem() {
 
     const producaoNuvem = normalizarProducaoDaNuvem(json.producao);
     const refugoNuvem = normalizarRefugoDaNuvem(json.refugo);
+    const paradasNuvem = normalizarParadasDaNuvem(json.paradas);
 
     if (producaoNuvem.length > 0) DADOS_BRUTOS = producaoNuvem;
     if (refugoNuvem.length > 0) REFUGO_BRUTOS = refugoNuvem;
+    if (paradasNuvem.length > 0) PARADAS_BRUTOS = paradasNuvem;
 
-    if (producaoNuvem.length > 0 || refugoNuvem.length > 0) {
+    if (producaoNuvem.length > 0 || refugoNuvem.length > 0 || paradasNuvem.length > 0) {
       recalcularMaquinasOrdenadas();
 
       // Reseta a seleção interna de todos os filtros para acompanhar a nova
@@ -775,7 +885,8 @@ async function carregarDadosDaNuvem() {
 
       const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
       const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
-      const datasValidas = [...datasProducao, ...datasRefugo].sort();
+      const datasParadas = PARADAS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
+      const datasValidas = [...datasProducao, ...datasRefugo, ...datasParadas].sort();
       if (datasValidas.length) {
         document.getElementById('filtroInicio').value = datasValidas[0];
         document.getElementById('filtroFim').value = datasValidas[datasValidas.length - 1];
@@ -786,6 +897,7 @@ async function carregarDadosDaNuvem() {
       // novos vindos da nuvem, mesmo com DADOS_BRUTOS/REFUGO_BRUTOS corretos.
       dadosFiltrados = [...DADOS_BRUTOS];
       refugoFiltrado = [...REFUGO_BRUTOS];
+      paradasFiltrado = [...PARADAS_BRUTOS];
 
       if (statusSync) { statusSync.textContent = '☁️ Dados sincronizados da nuvem.'; statusSync.className = 'upload-status ok'; }
     } else {
@@ -808,7 +920,7 @@ async function sincronizarComNuvem() {
       method: 'POST',
       // text/plain evita o "preflight" CORS, que o Apps Script não responde bem
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ chave: CHAVE_SECRETA, producao: DADOS_BRUTOS, refugo: REFUGO_BRUTOS })
+      body: JSON.stringify({ chave: CHAVE_SECRETA, producao: DADOS_BRUTOS, refugo: REFUGO_BRUTOS, paradas: PARADAS_BRUTOS })
     });
     const json = await resp.json();
     if (!json.ok) throw new Error(json.erro || 'Falha desconhecida ao salvar na nuvem.');
@@ -825,6 +937,7 @@ async function sincronizarComNuvem() {
 // (lista de máquinas e período de datas) considerando os dois datasets.
 let dadosPendentesProducao = null; // produção lida do XLSX, aguardando confirmação
 let dadosPendentesRefugo = null;   // refugo lido do XLSX, aguardando confirmação
+let dadosPendentesParadas = null;  // paradas lidas do XLSX, aguardando confirmação
 
 function normalizarDataValor(v) {
   if (v instanceof Date) {
@@ -1014,12 +1127,149 @@ function parseXLSXRefugo(arrayBuffer) {
   return registros;
 }
 
+// ═══════════════════════ LIMPEZA ESPECÍFICA DE PARADAS ═══════════════════════
+// Baseada nas inconsistências reais encontradas na planilha controle_de_parada.xlsx:
+// nomes de máquina com casing misto, horários em texto malformado, e códigos de
+// parada com dígito faltando (deixando a descrição em branco).
+
+function normalizarHoraValor(v) {
+  if (v instanceof Date) {
+    const h = String(v.getUTCHours()).padStart(2, '0');
+    const m = String(v.getUTCMinutes()).padStart(2, '0');
+    const s = String(v.getUTCSeconds()).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+  // Fração do dia (formato de hora do Excel/Sheets quando a célula não é
+  // reconhecida como horário), ex: 0.5 = 12:00:00
+  if (typeof v === 'number' && isFinite(v) && v >= 0 && v < 1) {
+    const totalSegundos = Math.round(v * 86400);
+    const h = String(Math.floor(totalSegundos / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSegundos % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSegundos % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+  let str = String(v ?? '').trim();
+  if (!str) return null;
+  // Corrige separadores errados comuns (";" ou "." no lugar de ":")
+  str = str.replace(/[;.]/g, ':');
+  const m = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10), min = parseInt(m[2], 10), s = m[3] ? parseInt(m[3], 10) : 0;
+  if (h > 23 || min > 59 || s > 59) return null;
+  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// Tenta recuperar um código de parada com um dígito faltando (ex: "201031"
+// em vez de "2010031"), testando a inserção de um '0' em cada posição até
+// encontrar um código que já é conhecido (tem descrição válida) no arquivo.
+function tentarCorrigirCodigoParada(codigoStr, mapaValido) {
+  if (mapaValido.has(codigoStr)) return codigoStr;
+  for (let i = 0; i <= codigoStr.length; i++) {
+    const tentativa = codigoStr.slice(0, i) + '0' + codigoStr.slice(i);
+    if (mapaValido.has(tentativa)) return tentativa;
+  }
+  return null;
+}
+
+function limparRegistrosParadas(registros) {
+  const semDuplicatas = removerDuplicatasExatas(registros);
+  const semAnomaliasDeData = corrigirDatasAnomalas(semDuplicatas.registros);
+  let regs = semAnomaliasDeData.registros.map(r => ({ ...r }));
+
+  // Constrói o mapa código -> descrição a partir dos pares já válidos no arquivo
+  const mapaCodigoDescricao = new Map();
+  regs.forEach(r => {
+    if (r['CODIGO DA PARADA'] && r['DESCRICAO DA PARADA']) {
+      mapaCodigoDescricao.set(String(r['CODIGO DA PARADA']), r['DESCRICAO DA PARADA']);
+    }
+  });
+
+  let descricoesPreenchidas = 0;
+  let codigosCorrigidos = 0;
+  let horariosInvalidos = 0;
+
+  regs.forEach(r => {
+    const codigoStr = r['CODIGO DA PARADA'] ? String(r['CODIGO DA PARADA']) : '';
+
+    // Descrição ausente: tenta preencher via código (corrigindo o código se necessário)
+    if (codigoStr && !r['DESCRICAO DA PARADA']) {
+      if (mapaCodigoDescricao.has(codigoStr)) {
+        r['DESCRICAO DA PARADA'] = mapaCodigoDescricao.get(codigoStr);
+        descricoesPreenchidas++;
+      } else {
+        const corrigido = tentarCorrigirCodigoParada(codigoStr, mapaCodigoDescricao);
+        if (corrigido) {
+          r['CODIGO DA PARADA'] = Number(corrigido);
+          r['DESCRICAO DA PARADA'] = mapaCodigoDescricao.get(corrigido);
+          descricoesPreenchidas++;
+          codigosCorrigidos++;
+        }
+      }
+    }
+
+    if (r['INICIO DA PARADA'] === null || r['FINAL DA PARADA'] === null) {
+      horariosInvalidos++;
+    }
+  });
+
+  return {
+    registros: regs,
+    duplicatasRemovidas: semDuplicatas.removidas,
+    datasCorrigidas: semAnomaliasDeData.corrigidas,
+    descricoesPreenchidas,
+    codigosCorrigidos,
+    horariosInvalidos
+  };
+}
+
+function parseXLSXParadas(arrayBuffer) {
+  if (typeof XLSX === 'undefined') {
+    throw new Error('Biblioteca de leitura de XLSX não carregou (é necessária conexão com a internet na primeira vez).');
+  }
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+  const nomeAba = workbook.SheetNames[0];
+  if (!nomeAba) throw new Error('A planilha não contém nenhuma aba.');
+  const planilha = workbook.Sheets[nomeAba];
+  const linhas = XLSX.utils.sheet_to_json(planilha, { raw: true, defval: '' });
+  if (!linhas.length) throw new Error('Planilha vazia ou sem linhas de dados.');
+
+  const mapaChaves = {};
+  Object.keys(linhas[0]).forEach(k => { mapaChaves[k.trim().toUpperCase()] = k; });
+
+  const obrigatorias = ['CT', 'DATA', 'TURNO', 'CODIGO DA PARADA', 'INICIO DA PARADA', 'FINAL DA PARADA'];
+  const faltando = obrigatorias.filter(c => !(c in mapaChaves));
+  if (faltando.length > 0) {
+    throw new Error('Colunas ausentes na planilha de paradas: ' + faltando.join(', '));
+  }
+  const temOP = 'OP' in mapaChaves;
+  const temCodProduto = 'CODIGO DO PRODUTO' in mapaChaves;
+  const temDescricao = 'DESCRICAO DA PARADA' in mapaChaves;
+
+  const registros = linhas
+    .map(linha => ({
+      OP: temOP ? (linha[mapaChaves['OP']] === '' ? null : linha[mapaChaves['OP']]) : null,
+      CT: String(linha[mapaChaves['CT']] ?? '').toLowerCase().trim(),
+      DATA: normalizarDataValor(linha[mapaChaves['DATA']]),
+      'CODIGO DO PRODUTO': temCodProduto ? (parseInt(linha[mapaChaves['CODIGO DO PRODUTO']], 10) || 0) : 0,
+      TURNO: String(linha[mapaChaves['TURNO']] ?? '').trim(),
+      'CODIGO DA PARADA': parseInt(linha[mapaChaves['CODIGO DA PARADA']], 10) || 0,
+      'DESCRICAO DA PARADA': temDescricao ? String(linha[mapaChaves['DESCRICAO DA PARADA']] ?? '').trim() : '',
+      'INICIO DA PARADA': normalizarHoraValor(linha[mapaChaves['INICIO DA PARADA']]),
+      'FINAL DA PARADA': normalizarHoraValor(linha[mapaChaves['FINAL DA PARADA']])
+    }))
+    .filter(r => r.CT); // descarta linhas em branco
+
+  if (!registros.length) throw new Error('Nenhum registro válido encontrado na planilha de paradas.');
+  return limparRegistrosParadas(registros);
+}
+
 // Recalcula a lista de máquinas com base na união de Produção (CT) + Refugo (SETOR),
 // já que o filtro "Máquinas" é compartilhado pelos dois datasets.
 function recalcularMaquinasOrdenadas() {
   const maquinasProducao = new Set(DADOS_BRUTOS.map(r => r.CT));
   const maquinasRefugo = new Set(REFUGO_BRUTOS.map(r => r.SETOR));
-  const todasMaquinas = new Set([...maquinasProducao, ...maquinasRefugo]);
+  const maquinasParadas = new Set(PARADAS_BRUTOS.map(r => r.CT));
+  const todasMaquinas = new Set([...maquinasProducao, ...maquinasRefugo, ...maquinasParadas]);
 
   MAQUINAS_ORDENADAS_JS = MAQUINAS_MESTRA_JS.filter(m => todasMaquinas.has(m));
   todasMaquinas.forEach(m => {
@@ -1030,9 +1280,10 @@ function recalcularMaquinasOrdenadas() {
 
 // Aplica os dados pendentes (produção e/ou refugo) e recalcula os filtros
 // compartilhados entre os dois datasets.
-function aplicarNovosDados({ producao, refugo }) {
+function aplicarNovosDados({ producao, refugo, paradas }) {
   if (producao) DADOS_BRUTOS = producao;
   if (refugo) REFUGO_BRUTOS = refugo;
+  if (paradas) PARADAS_BRUTOS = paradas;
 
   recalcularMaquinasOrdenadas();
 
@@ -1041,10 +1292,11 @@ function aplicarNovosDados({ producao, refugo }) {
     SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
   });
 
-  // Atualiza o período do filtro de datas considerando os dois datasets
+  // Atualiza o período do filtro de datas considerando os três datasets
   const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
   const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
-  const datasValidas = [...datasProducao, ...datasRefugo].sort();
+  const datasParadas = PARADAS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
+  const datasValidas = [...datasProducao, ...datasRefugo, ...datasParadas].sort();
   if (datasValidas.length) {
     document.getElementById('filtroInicio').value = datasValidas[0];
     document.getElementById('filtroFim').value = datasValidas[datasValidas.length - 1];
@@ -1053,12 +1305,13 @@ function aplicarNovosDados({ producao, refugo }) {
   initDropdowns();
   dadosFiltrados = [...DADOS_BRUTOS];
   refugoFiltrado = [...REFUGO_BRUTOS];
+  paradasFiltrado = [...PARADAS_BRUTOS];
   renderAll();
 }
 
 function habilitarBotaoAtualizar() {
   const btn = document.getElementById('atualizarBtn');
-  const habilitar = !!(dadosPendentesProducao || dadosPendentesRefugo);
+  const habilitar = !!(dadosPendentesProducao || dadosPendentesRefugo || dadosPendentesParadas);
   btn.disabled = !habilitar;
   btn.style.opacity = habilitar ? '1' : '.5';
   btn.style.cursor = habilitar ? 'pointer' : 'not-allowed';
@@ -1132,15 +1385,57 @@ function handleXlsxUploadRefugo(event) {
   leitor.readAsArrayBuffer(arquivo);
 }
 
+function handleXlsxUploadParadas(event) {
+  const arquivo = event.target.files[0];
+  const status = document.getElementById('uploadStatusParadas');
+  if (!arquivo) return;
+
+  const leitor = new FileReader();
+  leitor.onload = function(e) {
+    try {
+      const resultado = parseXLSXParadas(e.target.result);
+      dadosPendentesParadas = resultado.registros;
+
+      let detalhes = '';
+      if (resultado.duplicatasRemovidas > 0) detalhes += ` · ${resultado.duplicatasRemovidas} duplicata(s) removida(s)`;
+      if (resultado.datasCorrigidas > 0) detalhes += ` · ${resultado.datasCorrigidas} data(s) corrigida(s)`;
+      if (resultado.codigosCorrigidos > 0) detalhes += ` · ${resultado.codigosCorrigidos} código(s) de parada corrigido(s)`;
+      if (resultado.descricoesPreenchidas > 0) detalhes += ` · ${resultado.descricoesPreenchidas} descrição(ões) preenchida(s)`;
+      if (resultado.horariosInvalidos > 0) detalhes += ` · ⚠️ ${resultado.horariosInvalidos} horário(s) inválido(s)`;
+
+      status.textContent = `Paradas: ${dadosPendentesParadas.length} registros prontos ("${arquivo.name}")${detalhes}.`;
+      status.className = 'upload-status ok';
+      habilitarBotaoAtualizar();
+    } catch (err) {
+      dadosPendentesParadas = null;
+      habilitarBotaoAtualizar();
+      status.textContent = 'Erro: ' + err.message;
+      status.className = 'upload-status err';
+    } finally {
+      event.target.value = '';
+    }
+  };
+  leitor.onerror = function() {
+    dadosPendentesParadas = null;
+    habilitarBotaoAtualizar();
+    status.textContent = 'Erro ao ler o arquivo.';
+    status.className = 'upload-status err';
+    event.target.value = '';
+  };
+  leitor.readAsArrayBuffer(arquivo);
+}
+
 async function atualizarDashboard() {
-  if (!dadosPendentesProducao && !dadosPendentesRefugo) return;
+  if (!dadosPendentesProducao && !dadosPendentesRefugo && !dadosPendentesParadas) return;
 
   const statusProducao = document.getElementById('uploadStatusProducao');
   const statusRefugo = document.getElementById('uploadStatusRefugo');
+  const statusParadas = document.getElementById('uploadStatusParadas');
   const qtdProducao = dadosPendentesProducao ? dadosPendentesProducao.length : null;
   const qtdRefugo = dadosPendentesRefugo ? dadosPendentesRefugo.length : null;
+  const qtdParadas = dadosPendentesParadas ? dadosPendentesParadas.length : null;
 
-  aplicarNovosDados({ producao: dadosPendentesProducao, refugo: dadosPendentesRefugo });
+  aplicarNovosDados({ producao: dadosPendentesProducao, refugo: dadosPendentesRefugo, paradas: dadosPendentesParadas });
 
   if (qtdProducao !== null) {
     statusProducao.textContent = `✔ Produção atualizada (${qtdProducao} registros).`;
@@ -1150,12 +1445,17 @@ async function atualizarDashboard() {
     statusRefugo.textContent = `✔ Refugo atualizado (${qtdRefugo} registros).`;
     statusRefugo.className = 'upload-status ok';
   }
+  if (qtdParadas !== null) {
+    statusParadas.textContent = `✔ Paradas atualizadas (${qtdParadas} registros).`;
+    statusParadas.className = 'upload-status ok';
+  }
 
   dadosPendentesProducao = null;
   dadosPendentesRefugo = null;
+  dadosPendentesParadas = null;
   habilitarBotaoAtualizar();
 
-  // Salva o estado completo e atual (produção + refugo) na planilha,
+  // Salva o estado completo e atual (produção + refugo + paradas) na planilha,
   // para que outros computadores também vejam os dados novos.
   await sincronizarComNuvem();
 }
@@ -1276,9 +1576,11 @@ function showBarTip(e, containerId, idx) {
   if (!item) return;
 
   const title = item.fullLabel || item.label;
+  const unidade = item.unidade || 'un.';
+  const valorTotal = item.rotulo || `${fmt(item.value)} ${unidade}`;
   let html = `<div class="tip-header">
     <span class="tip-title">${title}</span>
-    <span class="tip-total">${fmt(item.value)} un.</span>
+    <span class="tip-total">${valorTotal}</span>
   </div>`;
 
   if (item.turnos && item.turnos.length > 0) {
@@ -1289,7 +1591,7 @@ function showBarTip(e, containerId, idx) {
         <span class="tip-item-name" style="display:flex;align-items:center;gap:6px">
           <span class="turno-legend-swatch t${t.n}"></span>${t.turno}
         </span>
-        <span class="tip-item-val">${fmt(t.value)} un.</span>
+        <span class="tip-item-val">${fmt(t.value)} ${unidade}</span>
       </div>`;
     });
     html += `</div>`;
@@ -1455,7 +1757,7 @@ function renderStackedBars(containerId, data) {
 }
 
 // ═══════════════════════ HORIZONTAL BAR CHART ═══════════════════════
-function renderHorizontalBars(containerId, data) {
+function renderHorizontalBars(containerId, data, onClickFn) {
   const container = document.getElementById(containerId);
   if (!data.length) { container.innerHTML = '<div class="no-data">Sem dados com os filtros selecionados</div>'; return; }
 
@@ -1465,13 +1767,14 @@ function renderHorizontalBars(containerId, data) {
   let html = '';
   data.forEach((item, idx) => {
     const pct = Math.max((item.value / maxVal) * 100, 1);
-    html += `<div class="h-bar-row"
+    const clickAttr = onClickFn ? `onclick="${onClickFn}('${String(item.label).replace(/'/g, "\\'")}')" style="cursor:pointer"` : '';
+    html += `<div class="h-bar-row" ${clickAttr}
                   onmouseenter="showBarTip(event, '${containerId}', ${idx})"
                   onmousemove="moveTip(event)"
                   onmouseleave="hideTip()">
       <div class="h-bar-name" title="${item.label}">${item.label}</div>
       <div class="h-bar-track">
-        <div class="h-bar-fill" style="width:${pct}%">${fmt(item.value)}</div>
+        <div class="h-bar-fill" style="width:${pct}%">${item.rotulo || fmt(item.value)}</div>
       </div>
     </div>`;
   });
@@ -1590,6 +1893,171 @@ function renderChartDiaSemana() {
   renderHorizontalBars('chartDiaSemana', data);
 }
 
+// ═══════════════════════ RENDER: INDICADORES DE PARADAS ═══════════════════════
+// Calcula a duração da parada em minutos a partir de INICIO/FINAL DA PARADA
+// (formato "HH:MM:SS"). Quando o horário final é menor que o inicial,
+// assume que a parada cruzou a meia-noite (comum no 3° turno) e soma 24h.
+function duracaoMinutosParada(r) {
+  if (!r['INICIO DA PARADA'] || !r['FINAL DA PARADA']) return 0;
+  const [hi, mi, si] = r['INICIO DA PARADA'].split(':').map(Number);
+  const [hf, mf, sf] = r['FINAL DA PARADA'].split(':').map(Number);
+  const inicioMin = hi * 60 + mi + si / 60;
+  let finalMin = hf * 60 + mf + sf / 60;
+  if (finalMin < inicioMin) finalMin += 24 * 60;
+  return finalMin - inicioMin;
+}
+
+function renderChartMaquinaParada() {
+  const duracaoPorMaquina = {};
+  paradasFiltrado.forEach(r => {
+    duracaoPorMaquina[r.CT] = (duracaoPorMaquina[r.CT] || 0) + duracaoMinutosParada(r);
+  });
+  const sorted = Object.entries(duracaoPorMaquina).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  const data = sorted.map(([k, v]) => ({
+    label: k,
+    fullLabel: 'Máquina: ' + k,
+    value: Math.round((v / 60) * 10) / 10,
+    rotulo: fmtHorasMin(v)
+  }));
+  renderHorizontalBars('chartMaquinaParada', data, 'abrirDetalheMaquinaParada');
+}
+
+function renderChartMotivoParada() {
+  const duracaoPorMotivo = {};
+  paradasFiltrado.forEach(r => {
+    const motivo = r['DESCRICAO DA PARADA'] || 'Não informado';
+    duracaoPorMotivo[motivo] = (duracaoPorMotivo[motivo] || 0) + duracaoMinutosParada(r);
+  });
+  const sorted = Object.entries(duracaoPorMotivo).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  const data = sorted.map(([k, v]) => ({
+    label: k,
+    fullLabel: 'Motivo: ' + k,
+    value: Math.round((v / 60) * 10) / 10,
+    rotulo: fmtHorasMin(v)
+  }));
+  renderHorizontalBars('chartMotivoParada', data, 'abrirDetalheMotivoParada');
+}
+
+function renderChartTurnoParada() {
+  const duracaoPorTurno = {};
+  paradasFiltrado.forEach(r => {
+    duracaoPorTurno[r.TURNO] = (duracaoPorTurno[r.TURNO] || 0) + duracaoMinutosParada(r);
+  });
+  const sorted = Object.entries(duracaoPorTurno).sort((a, b) => b[1] - a[1]);
+  const data = sorted.map(([k, v]) => ({
+    label: k,
+    fullLabel: 'Turno: ' + k,
+    value: Math.round((v / 60) * 10) / 10,
+    rotulo: fmtHorasMin(v)
+  }));
+  renderHorizontalBars('chartTurnoParada', data);
+}
+
+// ═══════════════════════ MODAL: DETALHE DE PARADAS POR MÁQUINA ═══════════════════════
+function abrirModal(titulo, conteudoHtml) {
+  document.getElementById('modalTitulo').textContent = titulo;
+  document.getElementById('modalConteudo').innerHTML = conteudoHtml;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function fecharModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+function fmtHorasMin(minutos) {
+  const totalMin = Math.round(minutos);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${String(m).padStart(2, '0')}min`;
+}
+
+function abrirDetalheMaquinaParada(maquina) {
+  const registros = paradasFiltrado
+    .filter(r => r.CT === maquina)
+    .sort((a, b) => (b.DATA + (b['INICIO DA PARADA'] || '')).localeCompare(a.DATA + (a['INICIO DA PARADA'] || '')));
+
+  if (!registros.length) {
+    abrirModal('Paradas: ' + maquina, '<div class="no-data">Nenhuma parada encontrada com os filtros atuais.</div>');
+    return;
+  }
+
+  const porDia = {};
+  registros.forEach(r => {
+    if (!porDia[r.DATA]) porDia[r.DATA] = [];
+    porDia[r.DATA].push(r);
+  });
+  const dias = Object.keys(porDia).sort().reverse();
+
+  let html = '';
+  dias.forEach(dia => {
+    const eventos = porDia[dia];
+    const totalMin = eventos.reduce((s, r) => s + duracaoMinutosParada(r), 0);
+    html += `<div class="modal-dia">
+      <div class="modal-dia-header">
+        <span>${fmtDataBR(dia)}</span>
+        <span class="total">${fmtHorasMin(totalMin)} parado</span>
+      </div>`;
+    eventos.forEach(ev => {
+      const motivo = ev['DESCRICAO DA PARADA'] || 'Não informado';
+      const horario = `${ev['INICIO DA PARADA'] || '?'} - ${ev['FINAL DA PARADA'] || '?'}`;
+      html += `<div class="modal-evento">
+        <span>${motivo} <span style="color:var(--text-sub)">(${horario})</span></span>
+        <span class="val">${fmtHorasMin(duracaoMinutosParada(ev))}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  abrirModal('Paradas: ' + maquina, html);
+}
+
+function abrirDetalheMotivoParada(motivo) {
+  const registros = paradasFiltrado
+    .filter(r => (r['DESCRICAO DA PARADA'] || 'Não informado') === motivo)
+    .sort((a, b) => (b.DATA + (b['INICIO DA PARADA'] || '')).localeCompare(a.DATA + (a['INICIO DA PARADA'] || '')));
+
+  if (!registros.length) {
+    abrirModal('Motivo: ' + motivo, '<div class="no-data">Nenhuma parada encontrada com os filtros atuais.</div>');
+    return;
+  }
+
+  const porMaquina = {};
+  registros.forEach(r => {
+    if (!porMaquina[r.CT]) porMaquina[r.CT] = [];
+    porMaquina[r.CT].push(r);
+  });
+
+  // Ordena as máquinas pelo tempo total parado por esse motivo (maior primeiro)
+  const maquinas = Object.keys(porMaquina).sort((a, b) => {
+    const totalA = porMaquina[a].reduce((s, r) => s + duracaoMinutosParada(r), 0);
+    const totalB = porMaquina[b].reduce((s, r) => s + duracaoMinutosParada(r), 0);
+    return totalB - totalA;
+  });
+
+  let html = '';
+  maquinas.forEach(maq => {
+    const eventos = porMaquina[maq];
+    const totalMin = eventos.reduce((s, r) => s + duracaoMinutosParada(r), 0);
+    html += `<div class="modal-dia">
+      <div class="modal-dia-header">
+        <span>${maq}</span>
+        <span class="total">${fmtHorasMin(totalMin)} parado</span>
+      </div>`;
+    eventos.forEach(ev => {
+      const horario = `${ev['INICIO DA PARADA'] || '?'} - ${ev['FINAL DA PARADA'] || '?'}`;
+      html += `<div class="modal-evento">
+        <span>${fmtDataBR(ev.DATA)} <span style="color:var(--text-sub)">(${horario})</span></span>
+        <span class="val">${fmtHorasMin(duracaoMinutosParada(ev))}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  abrirModal('Motivo: ' + motivo, html);
+}
+
 // ═══════════════════════ RENDER: INDICADORES DE REFUGO ═══════════════════════
 function renderKPIsRefugo() {
   const container = document.getElementById('kpiRefugoGrid');
@@ -1695,6 +2163,9 @@ function renderAll() {
   renderChartMaquina();
   renderChartTurno();
   renderChartDiaSemana();
+  renderChartMaquinaParada();
+  renderChartMotivoParada();
+  renderChartTurnoParada();
   renderKPIsRefugo();
   renderChartCausasRefugo();
   renderChartItensRefugo();
