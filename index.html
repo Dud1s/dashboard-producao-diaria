@@ -608,6 +608,7 @@ const MAQUINA_INFO = {
   'sopro 3':      { cat: 'Sopros',            tipo: 'Produto Semi Acabado' },
   'sopro 4':      { cat: 'Sopros',            tipo: 'Produto Semi Acabado' },
   'rebarbação':   { cat: 'Setor Rebarbação',  tipo: 'Produto Semi Acabado' },
+  'pu':           { cat: 'Setor PU / Montagem', tipo: 'Produto Semi Acabado' },
   'montagem':     { cat: 'Setor PU / Montagem', tipo: 'Produto Semi Acabado' },
   'retrabalho':   { cat: 'Setor PU / Montagem', tipo: 'Produto Semi Acabado' }
 };
@@ -643,7 +644,7 @@ function toggleTheme() {
 
 // ═══════════════════════ MULTISELECT DROPDOWN LOGIC ═══════════════════════
 // Ordenação sequencial solicitada: Injetoras 1-10, Sopros 1-4, Rebarbação, Montagem, Retrabalho
-const MAQUINAS_MESTRA_JS = ["injetora 1", "injetora 2", "injetora 3", "injetora 4", "injetora 5", "injetora 6", "injetora 7", "injetora 8", "injetora 9", "injetora 10", "sopro 1", "sopro 2", "sopro 3", "sopro 4", "rebarbação", "montagem", "retrabalho"];
+const MAQUINAS_MESTRA_JS = ["injetora 1", "injetora 2", "injetora 3", "injetora 4", "injetora 5", "injetora 6", "injetora 7", "injetora 8", "injetora 9", "injetora 10", "sopro 1", "sopro 2", "sopro 3", "sopro 4", "rebarbação", "pu", "montagem", "retrabalho"];
 let MAQUINAS_ORDENADAS_JS = ["injetora 1", "injetora 2", "injetora 3", "injetora 4", "injetora 5", "injetora 6", "injetora 7", "injetora 8", "injetora 9", "injetora 10", "sopro 1", "sopro 2", "rebarbação", "montagem", "retrabalho"];
 
 const OPCOES = {
@@ -1041,13 +1042,76 @@ function corrigirDatasAnomalas(registros) {
   return { registros: resultado, corrigidas };
 }
 
+// Corrige erros de digitação no nome da máquina (CT), comparando a palavra
+// digitada com os nomes conhecidos de setor/tipo de máquina e corrigindo
+// automaticamente quando a diferença é pequena o suficiente para ser,
+// quase certamente, um erro de digitação (ex: "inejtora 5" -> "injetora 5").
+const PALAVRAS_MAQUINA_CONHECIDAS = ['injetora', 'sopro', 'rebarbação', 'montagem', 'retrabalho', 'pu'];
+
+function distanciaLevenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+      else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function corrigirTypoMaquina(nomeMaquina) {
+  const match = nomeMaquina.match(/^(.*?)\s*(\d+)?$/);
+  if (!match) return nomeMaquina;
+
+  const palavra = match[1].trim();
+  const numero = match[2] || '';
+  if (!palavra) return nomeMaquina;
+
+  let palavraFinal = palavra;
+
+  // Só tenta corrigir erro de digitação se a palavra ainda não for conhecida
+  if (!PALAVRAS_MAQUINA_CONHECIDAS.includes(palavra)) {
+    let melhor = null;
+    let melhorDist = Infinity;
+    PALAVRAS_MAQUINA_CONHECIDAS.forEach(candidata => {
+      const d = distanciaLevenshtein(palavra, candidata);
+      if (d < melhorDist) { melhorDist = d; melhor = candidata; }
+    });
+
+    // Só corrige se a diferença for pequena o bastante (evita "inventar"
+    // correções erradas em nomes de setor genuinamente diferentes/novos)
+    // Palavras curtas (ex: "pu") usam limite mais rígido, senão qualquer
+    // texto curto acaba "virando" PU por engano.
+    const limiteDistancia = melhor.length <= 3 ? 1 : Math.max(2, Math.floor(melhor.length * 0.35));
+    if (melhor && melhorDist <= limiteDistancia) {
+      palavraFinal = melhor;
+    }
+  }
+
+  // Sempre normaliza o espaço entre a palavra e o número (ex: "injetora1" -> "injetora 1"),
+  // mesmo quando a palavra já estava certa e não precisou de correção de digitação.
+  return numero ? `${palavraFinal} ${numero}` : palavraFinal;
+}
+
 function limparRegistrosProducao(registros) {
   const semDuplicatas = removerDuplicatasExatas(registros);
   const semAnomaliasDeData = corrigirDatasAnomalas(semDuplicatas.registros);
+
+  let nomesMaquinaCorrigidos = 0;
+  const registrosFinais = semAnomaliasDeData.registros.map(r => {
+    const ctCorrigido = corrigirTypoMaquina(r.CT);
+    if (ctCorrigido !== r.CT) nomesMaquinaCorrigidos++;
+    return { ...r, CT: ctCorrigido };
+  });
+
   return {
-    registros: semAnomaliasDeData.registros,
+    registros: registrosFinais,
     duplicatasRemovidas: semDuplicatas.removidas,
-    datasCorrigidas: semAnomaliasDeData.corrigidas
+    datasCorrigidas: semAnomaliasDeData.corrigidas,
+    nomesMaquinaCorrigidos
   };
 }
 
@@ -1124,7 +1188,26 @@ function parseXLSXRefugo(arrayBuffer) {
     .filter(r => r.SETOR); // descarta linhas em branco
 
   if (!registros.length) throw new Error('Nenhum registro válido encontrado na planilha de refugo.');
-  return registros;
+  return limparRegistrosRefugo(registros);
+}
+
+function limparRegistrosRefugo(registros) {
+  const semDuplicatas = removerDuplicatasExatas(registros);
+  const semAnomaliasDeData = corrigirDatasAnomalas(semDuplicatas.registros);
+
+  let nomesMaquinaCorrigidos = 0;
+  const registrosFinais = semAnomaliasDeData.registros.map(r => {
+    const setorCorrigido = corrigirTypoMaquina(r.SETOR);
+    if (setorCorrigido !== r.SETOR) nomesMaquinaCorrigidos++;
+    return { ...r, SETOR: setorCorrigido };
+  });
+
+  return {
+    registros: registrosFinais,
+    duplicatasRemovidas: semDuplicatas.removidas,
+    datasCorrigidas: semAnomaliasDeData.corrigidas,
+    nomesMaquinaCorrigidos
+  };
 }
 
 // ═══════════════════════ LIMPEZA ESPECÍFICA DE PARADAS ═══════════════════════
@@ -1174,7 +1257,7 @@ function tentarCorrigirCodigoParada(codigoStr, mapaValido) {
 function limparRegistrosParadas(registros) {
   const semDuplicatas = removerDuplicatasExatas(registros);
   const semAnomaliasDeData = corrigirDatasAnomalas(semDuplicatas.registros);
-  let regs = semAnomaliasDeData.registros.map(r => ({ ...r }));
+  let regs = semAnomaliasDeData.registros.map(r => ({ ...r, CT: corrigirTypoMaquina(r.CT) }));
 
   // Constrói o mapa código -> descrição a partir dos pares já válidos no arquivo
   const mapaCodigoDescricao = new Map();
@@ -1331,6 +1414,7 @@ function handleXlsxUploadProducao(event) {
       let detalhes = '';
       if (resultado.duplicatasRemovidas > 0) detalhes += ` · ${resultado.duplicatasRemovidas} duplicata(s) removida(s)`;
       if (resultado.datasCorrigidas > 0) detalhes += ` · ${resultado.datasCorrigidas} data(s) corrigida(s)`;
+      if (resultado.nomesMaquinaCorrigidos > 0) detalhes += ` · ${resultado.nomesMaquinaCorrigidos} nome(s) de máquina corrigido(s)`;
 
       status.textContent = `Produção: ${dadosPendentesProducao.length} registros prontos ("${arquivo.name}")${detalhes}.`;
       status.className = 'upload-status ok';
@@ -1362,8 +1446,15 @@ function handleXlsxUploadRefugo(event) {
   const leitor = new FileReader();
   leitor.onload = function(e) {
     try {
-      dadosPendentesRefugo = parseXLSXRefugo(e.target.result);
-      status.textContent = `Refugo: ${dadosPendentesRefugo.length} registros prontos ("${arquivo.name}").`;
+      const resultado = parseXLSXRefugo(e.target.result);
+      dadosPendentesRefugo = resultado.registros;
+
+      let detalhes = '';
+      if (resultado.duplicatasRemovidas > 0) detalhes += ` · ${resultado.duplicatasRemovidas} duplicata(s) removida(s)`;
+      if (resultado.datasCorrigidas > 0) detalhes += ` · ${resultado.datasCorrigidas} data(s) corrigida(s)`;
+      if (resultado.nomesMaquinaCorrigidos > 0) detalhes += ` · ${resultado.nomesMaquinaCorrigidos} nome(s) de máquina corrigido(s)`;
+
+      status.textContent = `Refugo: ${dadosPendentesRefugo.length} registros prontos ("${arquivo.name}")${detalhes}.`;
       status.className = 'upload-status ok';
       habilitarBotaoAtualizar();
     } catch (err) {
