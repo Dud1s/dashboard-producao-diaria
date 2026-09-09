@@ -357,10 +357,16 @@ body{
   box-shadow:var(--shadow-lg);
 }
 .modal-header{
-  display:flex;justify-content:space-between;align-items:center;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
   margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);
 }
-.modal-title{font-size:1.05rem;font-weight:700;color:var(--text)}
+.modal-title{font-size:1.05rem;font-weight:700;color:var(--text);flex-shrink:0}
+#modalBusca{
+  flex:1;min-width:0;max-width:180px;
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;color:var(--text);font-size:.85rem;
+}
+#modalBusca:focus{outline:none;border-color:var(--accent)}
 .modal-close{
   cursor:pointer;background:var(--bar-bg);border:none;border-radius:50%;
   width:28px;height:28px;font-size:.95rem;color:var(--text);
@@ -387,6 +393,7 @@ body{
   <div class="modal-box">
     <div class="modal-header">
       <div class="modal-title" id="modalTitulo"></div>
+      <input type="text" id="modalBusca" placeholder="Buscar código..." oninput="filtrarModalProdutos()" style="display:none">
       <button class="modal-close" onclick="fecharModal()">✕</button>
     </div>
     <div id="modalConteudo"></div>
@@ -509,6 +516,7 @@ body{
     </div>
 
     <button class="btn-reset" onclick="resetarTudo()">Limpar Filtros</button>
+    <button class="btn-reset" onclick="exportarRelatorioCodigos()" style="border-color:var(--accent);color:var(--accent)">📊 Exportar Relatório</button>
   </div>
 
   <!-- KPIs -->
@@ -804,6 +812,59 @@ function resetarTudo() {
   refugoFiltrado = [...REFUGO_BRUTOS];
   paradasFiltrado = [...PARADAS_BRUTOS];
   renderAll();
+}
+
+// ═══════════════════════ EXPORTAR RELATÓRIO DE CÓDIGOS (XLSX) ═══════════════════════
+// Gera um Excel com os códigos produzidos no período/filtros atuais,
+// mostrando data, quantidade produzida e quantidade refugada correspondente
+// (cruzando produção e refugo por CODIGO + DATA).
+function exportarRelatorioCodigos() {
+  if (typeof XLSX === 'undefined') {
+    alert('Biblioteca de exportação não carregou (é necessária conexão com a internet).');
+    return;
+  }
+  if (!dadosFiltrados.length) {
+    alert('Não há dados de produção no período/filtros atuais para exportar.');
+    return;
+  }
+
+  // Agrupa produção por CODIGO + DATA
+  const producaoPorCodigoData = {};
+  dadosFiltrados.forEach(r => {
+    const chave = `${r.CODIGO}|${r.DATA}`;
+    producaoPorCodigoData[chave] = (producaoPorCodigoData[chave] || 0) + (Number(r['QUANTIDADE PRODUZIDA']) || 0);
+  });
+
+  // Agrupa refugo por CODIGO DO PRODUTO + DATA (mesma chave de cruzamento)
+  const refugoPorCodigoData = {};
+  refugoFiltrado.forEach(r => {
+    const chave = `${r['CODIGO DO PRODUTO']}|${r.DATA}`;
+    refugoPorCodigoData[chave] = (refugoPorCodigoData[chave] || 0) + (Number(r['QUANTIDADE']) || 0);
+  });
+
+  // Monta uma linha por CODIGO + DATA que teve produção
+  const linhas = Object.keys(producaoPorCodigoData).map(chave => {
+    const [codigo, data] = chave.split('|');
+    return {
+      CODIGO: Number(codigo),
+      DATA: data,
+      'QUANTIDADE PRODUZIDA': producaoPorCodigoData[chave],
+      'QUANTIDADE REFUGADA': refugoPorCodigoData[chave] || 0
+    };
+  });
+
+  // Ordena por data e depois código, e formata a data como DD/MM/AAAA
+  linhas.sort((a, b) => a.DATA.localeCompare(b.DATA) || a.CODIGO - b.CODIGO);
+  linhas.forEach(l => { l.DATA = fmtDataBR(l.DATA); });
+
+  const ws = XLSX.utils.json_to_sheet(linhas);
+  ws['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 20 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Relatório');
+
+  const ini = document.getElementById('filtroInicio').value || 'inicio';
+  const fim = document.getElementById('filtroFim').value || 'fim';
+  XLSX.writeFile(wb, `relatorio_producao_${ini}_a_${fim}.xlsx`);
 }
 
 // ═══════════════════════ CARREGAR / SINCRONIZAR COM A NUVEM ═══════════════════════
@@ -1807,6 +1868,7 @@ function renderVerticalBars(containerId, data) {
     html += `<div class="bar-col">
       <div class="bar-val">${fmt(item.value)}</div>
       <div class="bar" style="height:${h}px"
+           onclick="abrirDetalheProducaoDia('${containerId}', ${idx})"
            onmouseenter="showBarTip(event, '${containerId}', ${idx})"
            onmousemove="moveTip(event)"
            onmouseleave="hideTip()"></div>
@@ -1837,6 +1899,7 @@ function renderStackedBars(containerId, data) {
     html += `<div class="bar-col">
       <div class="bar-val">${fmt(item.value)}</div>
       <div class="bar-stack" style="height:${totalH}px"
+           onclick="abrirDetalheProducaoDia('${containerId}', ${idx})"
            onmouseenter="showBarTip(event, '${containerId}', ${idx})"
            onmousemove="moveTip(event)"
            onmouseleave="hideTip()">${segsHtml}</div>
@@ -2049,10 +2112,71 @@ function abrirModal(titulo, conteudoHtml) {
   document.getElementById('modalTitulo').textContent = titulo;
   document.getElementById('modalConteudo').innerHTML = conteudoHtml;
   document.getElementById('modalOverlay').classList.add('show');
+  // Por padrão, o campo de busca fica escondido — só o modal de produção
+  // por dia (abrirDetalheProducaoDia) o ativa, logo após esta chamada.
+  const busca = document.getElementById('modalBusca');
+  busca.style.display = 'none';
+  busca.value = '';
 }
 
 function fecharModal() {
   document.getElementById('modalOverlay').classList.remove('show');
+}
+
+// Abre um resumo dos códigos produzidos no dia (ou período) da barra clicada
+// no gráfico "Produção por Período" — reaproveita os mesmos dados já
+// calculados para o tooltip (item.produtos), sem refazer nenhum cálculo.
+function abrirDetalheProducaoDia(containerId, idx) {
+  const item = chartDataStore[containerId] && chartDataStore[containerId][idx];
+  if (!item) return;
+
+  const titulo = item.fullLabel || item.label;
+
+  if (!item.produtos || !item.produtos.length) {
+    abrirModal(titulo, '<div class="no-data">Nenhum produto registrado.</div>');
+    return;
+  }
+
+  const produtosOrdenados = [...item.produtos].sort((a, b) => b.quantidade - a.quantidade);
+
+  let html = `<div class="modal-evento" style="font-weight:700;background:transparent;padding-left:10px">
+    <span>Total do período</span>
+    <span class="val">${fmt(item.value)} un.</span>
+  </div>`;
+  html += '<div id="modalListaProdutos">';
+  produtosOrdenados.forEach(p => {
+    html += `<div class="modal-evento" data-codigo="${String(p.codigo).toLowerCase()}">
+      <span>Código ${p.codigo}</span>
+      <span class="val">${fmt(p.quantidade)} un.</span>
+    </div>`;
+  });
+  html += '</div><div class="no-data" id="modalSemResultado" style="display:none;padding:16px">Nenhum código encontrado nesse dia.</div>';
+
+  abrirModal(titulo, html);
+
+  // Ativa e reseta o campo de busca só pra este modal específico
+  const busca = document.getElementById('modalBusca');
+  busca.style.display = 'inline-block';
+  busca.value = '';
+}
+
+// Filtra as linhas de código já renderizadas no modal, comparando com o
+// texto digitado — não refaz nenhum cálculo, só mostra/esconde as linhas.
+function filtrarModalProdutos() {
+  const termo = document.getElementById('modalBusca').value.trim().toLowerCase();
+  const lista = document.getElementById('modalListaProdutos');
+  const semResultado = document.getElementById('modalSemResultado');
+  if (!lista) return;
+
+  let algumVisivel = false;
+  Array.from(lista.children).forEach(linha => {
+    const codigo = linha.getAttribute('data-codigo') || '';
+    const visivel = !termo || codigo.includes(termo);
+    linha.style.display = visivel ? '' : 'none';
+    if (visivel) algumVisivel = true;
+  });
+
+  if (semResultado) semResultado.style.display = algumVisivel ? 'none' : 'block';
 }
 
 function fmtHorasMin(minutos) {
