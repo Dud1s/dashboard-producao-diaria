@@ -2031,7 +2031,7 @@ function renderChartTurno() {
     value: v,
     produtos: produtosMap[k] || []
   }));
-  renderHorizontalBars('chartTurno', data);
+  renderHorizontalBars('chartTurno', data, 'abrirDetalheProducaoTurno');
 }
 
 function renderChartDiaSemana() {
@@ -2126,22 +2126,20 @@ function fecharModal() {
 // Abre um resumo dos códigos produzidos no dia (ou período) da barra clicada
 // no gráfico "Produção por Período" — reaproveita os mesmos dados já
 // calculados para o tooltip (item.produtos), sem refazer nenhum cálculo.
-function abrirDetalheProducaoDia(containerId, idx) {
-  const item = chartDataStore[containerId] && chartDataStore[containerId][idx];
-  if (!item) return;
-
-  const titulo = item.fullLabel || item.label;
-
-  if (!item.produtos || !item.produtos.length) {
+// Monta e abre o modal de "produtos" (código + quantidade) com busca ativa —
+// compartilhado entre o clique no gráfico de Período (por dia) e no gráfico
+// Por Turno, já que os dois mostram o mesmo tipo de detalhamento.
+function abrirModalProdutosComBusca(titulo, valorTotal, produtos) {
+  if (!produtos || !produtos.length) {
     abrirModal(titulo, '<div class="no-data">Nenhum produto registrado.</div>');
     return;
   }
 
-  const produtosOrdenados = [...item.produtos].sort((a, b) => b.quantidade - a.quantidade);
+  const produtosOrdenados = [...produtos].sort((a, b) => b.quantidade - a.quantidade);
 
   let html = `<div class="modal-evento" style="font-weight:700;background:transparent;padding-left:10px">
     <span>Total do período</span>
-    <span class="val">${fmt(item.value)} un.</span>
+    <span class="val">${fmt(valorTotal)} un.</span>
   </div>`;
   html += '<div id="modalListaProdutos">';
   produtosOrdenados.forEach(p => {
@@ -2150,14 +2148,27 @@ function abrirDetalheProducaoDia(containerId, idx) {
       <span class="val">${fmt(p.quantidade)} un.</span>
     </div>`;
   });
-  html += '</div><div class="no-data" id="modalSemResultado" style="display:none;padding:16px">Nenhum código encontrado nesse dia.</div>';
+  html += '</div><div class="no-data" id="modalSemResultado" style="display:none;padding:16px">Nenhum código encontrado.</div>';
 
   abrirModal(titulo, html);
 
-  // Ativa e reseta o campo de busca só pra este modal específico
+  // Ativa e reseta o campo de busca só pra esse tipo de modal
   const busca = document.getElementById('modalBusca');
   busca.style.display = 'inline-block';
   busca.value = '';
+}
+
+function abrirDetalheProducaoDia(containerId, idx) {
+  const item = chartDataStore[containerId] && chartDataStore[containerId][idx];
+  if (!item) return;
+  abrirModalProdutosComBusca(item.fullLabel || item.label, item.value, item.produtos);
+}
+
+function abrirDetalheProducaoTurno(turno) {
+  const dados = chartDataStore['chartTurno'];
+  const item = dados && dados.find(d => d.label === turno);
+  if (!item) return;
+  abrirModalProdutosComBusca(item.fullLabel || item.label, item.value, item.produtos);
 }
 
 // Filtra as linhas de código já renderizadas no modal, comparando com o
