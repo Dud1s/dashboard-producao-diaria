@@ -2285,14 +2285,29 @@ function abrirDetalheMotivoParada(motivo) {
 }
 
 // ═══════════════════════ RENDER: INDICADORES DE REFUGO ═══════════════════════
+// Refugo só é considerado quando a OP dele tem produção correspondente no
+// filtro atual. Refugo lançado sem OP compatível ainda (ex: a produção
+// daquela OP não foi lançada, ou está fora do período filtrado) fica de
+// fora de toda a seção de Refugo — e passa a aparecer automaticamente
+// assim que a produção da OP correspondente for lançada.
+function obterRefugoComOpValida() {
+  const opsProducao = new Set(
+    dadosFiltrados.map(r => normalizarOP(r.OP)).filter(op => op !== null)
+  );
+  return refugoFiltrado.filter(r => {
+    const op = normalizarOP(r.OP);
+    return op !== null && opsProducao.has(op);
+  });
+}
+
 function renderKPIsRefugo() {
   const container = document.getElementById('kpiRefugoGrid');
+  const refugoValido = obterRefugoComOpValida();
 
-  // Refugo total por OP (chave normalizada)
+  // Refugo total por OP (já restrito a OPs com produção correspondente)
   const refugoPorOp = {};
-  refugoFiltrado.forEach(r => {
+  refugoValido.forEach(r => {
     const key = normalizarOP(r.OP);
-    if (key === null) return;
     refugoPorOp[key] = (refugoPorOp[key] || 0) + (Number(r['QUANTIDADE']) || 0);
   });
 
@@ -2318,10 +2333,10 @@ function renderKPIsRefugo() {
   const totalGeralRelacionado = totalProduzidoRelacionado + totalRefugoRelacionado;
   const taxa = totalGeralRelacionado > 0 ? (totalRefugoRelacionado / totalGeralRelacionado) * 100 : 0;
 
-  // Totais gerais (sem exigir correspondência), para contexto informativo
-  const totalRefugoTudo = refugoFiltrado.reduce((s, r) => s + (Number(r['QUANTIDADE']) || 0), 0);
+  // Total Refugado — agora também restrito a refugo com OP compatível
+  const totalRefugoTudo = refugoValido.reduce((s, r) => s + (Number(r['QUANTIDADE']) || 0), 0);
 
-  const causaMap = groupBy(refugoFiltrado, r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']);
+  const causaMap = groupBy(refugoValido, r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']);
   const causaTop = Object.entries(causaMap).sort((a, b) => b[1] - a[1])[0];
 
   container.innerHTML = `
@@ -2333,7 +2348,7 @@ function renderKPIsRefugo() {
     <div class="kpi-card">
       <div class="kpi-label">Total Refugado</div>
       <div class="kpi-value">${fmt(totalRefugoTudo)}</div>
-      <div class="kpi-sub">${fmt(refugoFiltrado.length)} registros</div>
+      <div class="kpi-sub">${fmt(refugoValido.length)} registros</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Produção nas OPs com Refugo</div>
@@ -2349,9 +2364,10 @@ function renderKPIsRefugo() {
 }
 
 function renderChartCausasRefugo() {
-  const map = groupBy(refugoFiltrado, r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']);
+  const refugoValido = obterRefugoComOpValida();
+  const map = groupBy(refugoValido, r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']);
   const breakdown = getBreakdownPorGrupo(
-    refugoFiltrado, r => r['DESCRIÇÃO REFUGO'], r => String(r['CODIGO DO PRODUTO']), r => r['QUANTIDADE']
+    refugoValido, r => r['DESCRIÇÃO REFUGO'], r => String(r['CODIGO DO PRODUTO']), r => r['QUANTIDADE']
   );
   const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
   const data = sorted.map(([k, v]) => ({
@@ -2366,9 +2382,10 @@ function renderChartCausasRefugo() {
 }
 
 function renderChartItensRefugo() {
-  const map = groupBy(refugoFiltrado, r => String(r['CODIGO DO PRODUTO']), r => r['QUANTIDADE']);
+  const refugoValido = obterRefugoComOpValida();
+  const map = groupBy(refugoValido, r => String(r['CODIGO DO PRODUTO']), r => r['QUANTIDADE']);
   const breakdown = getBreakdownPorGrupo(
-    refugoFiltrado, r => String(r['CODIGO DO PRODUTO']), r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']
+    refugoValido, r => String(r['CODIGO DO PRODUTO']), r => r['DESCRIÇÃO REFUGO'], r => r['QUANTIDADE']
   );
   const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 15);
   const data = sorted.map(([k, v]) => ({
