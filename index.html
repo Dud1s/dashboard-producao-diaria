@@ -516,7 +516,6 @@ body{
     </div>
 
     <button class="btn-reset" onclick="resetarTudo()">Limpar Filtros</button>
-    <button class="btn-reset" onclick="exportarRelatorioCodigos()" style="border-color:var(--accent);color:var(--accent)">📊 Exportar Relatório</button>
   </div>
 
   <!-- KPIs -->
@@ -812,59 +811,6 @@ function resetarTudo() {
   refugoFiltrado = [...REFUGO_BRUTOS];
   paradasFiltrado = [...PARADAS_BRUTOS];
   renderAll();
-}
-
-// ═══════════════════════ EXPORTAR RELATÓRIO DE CÓDIGOS (XLSX) ═══════════════════════
-// Gera um Excel com os códigos produzidos no período/filtros atuais,
-// mostrando data, quantidade produzida e quantidade refugada correspondente
-// (cruzando produção e refugo por CODIGO + DATA).
-function exportarRelatorioCodigos() {
-  if (typeof XLSX === 'undefined') {
-    alert('Biblioteca de exportação não carregou (é necessária conexão com a internet).');
-    return;
-  }
-  if (!dadosFiltrados.length) {
-    alert('Não há dados de produção no período/filtros atuais para exportar.');
-    return;
-  }
-
-  // Agrupa produção por CODIGO + DATA
-  const producaoPorCodigoData = {};
-  dadosFiltrados.forEach(r => {
-    const chave = `${r.CODIGO}|${r.DATA}`;
-    producaoPorCodigoData[chave] = (producaoPorCodigoData[chave] || 0) + (Number(r['QUANTIDADE PRODUZIDA']) || 0);
-  });
-
-  // Agrupa refugo por CODIGO DO PRODUTO + DATA (mesma chave de cruzamento)
-  const refugoPorCodigoData = {};
-  refugoFiltrado.forEach(r => {
-    const chave = `${r['CODIGO DO PRODUTO']}|${r.DATA}`;
-    refugoPorCodigoData[chave] = (refugoPorCodigoData[chave] || 0) + (Number(r['QUANTIDADE']) || 0);
-  });
-
-  // Monta uma linha por CODIGO + DATA que teve produção
-  const linhas = Object.keys(producaoPorCodigoData).map(chave => {
-    const [codigo, data] = chave.split('|');
-    return {
-      CODIGO: Number(codigo),
-      DATA: data,
-      'QUANTIDADE PRODUZIDA': producaoPorCodigoData[chave],
-      'QUANTIDADE REFUGADA': refugoPorCodigoData[chave] || 0
-    };
-  });
-
-  // Ordena por data e depois código, e formata a data como DD/MM/AAAA
-  linhas.sort((a, b) => a.DATA.localeCompare(b.DATA) || a.CODIGO - b.CODIGO);
-  linhas.forEach(l => { l.DATA = fmtDataBR(l.DATA); });
-
-  const ws = XLSX.utils.json_to_sheet(linhas);
-  ws['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 20 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Relatório');
-
-  const ini = document.getElementById('filtroInicio').value || 'inicio';
-  const fim = document.getElementById('filtroFim').value || 'fim';
-  XLSX.writeFile(wb, `relatorio_producao_${ini}_a_${fim}.xlsx`);
 }
 
 // ═══════════════════════ CARREGAR / SINCRONIZAR COM A NUVEM ═══════════════════════
