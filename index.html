@@ -1471,21 +1471,14 @@ function aplicarNovosDados({ producao, refugo, paradas }) {
     SEL[ddId] = new Set(OPCOES[ddId].map(o => o.id));
   });
 
-  // Atualiza o período do filtro de datas considerando os três datasets
-  const datasProducao = DADOS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
-  const datasRefugo = REFUGO_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
-  const datasParadas = PARADAS_BRUTOS.map(r => r.DATA).filter(ehDataISOValida);
-  const datasValidas = [...datasProducao, ...datasRefugo, ...datasParadas].sort();
-  if (datasValidas.length) {
-    document.getElementById('filtroInicio').value = datasValidas[0];
-    document.getElementById('filtroFim').value = datasValidas[datasValidas.length - 1];
-  }
-
   initDropdowns();
-  dadosFiltrados = [...DADOS_BRUTOS];
-  refugoFiltrado = [...REFUGO_BRUTOS];
-  paradasFiltrado = [...PARADAS_BRUTOS];
-  renderAll();
+
+  // Sempre volta pro filtro do mês atual depois de atualizar os dados —
+  // em vez de pular pro período completo de todos os dados (que "bagunçava"
+  // a visão) — e usa aplicarFiltros() pra respeitar esse filtro de verdade
+  // (antes, os dados filtrados eram só uma cópia crua, sem filtro nenhum).
+  aplicarFiltroMesAtual();
+  aplicarFiltros();
 }
 
 function habilitarBotaoAtualizar() {
