@@ -391,6 +391,70 @@ body{
   margin-bottom:4px;font-size:.82rem;color:var(--text);
 }
 .modal-evento .val{color:var(--accent);font-weight:700;white-space:nowrap}
+/* ═══════════════════════ IMPRESSÃO / EXPORTAÇÃO EM PDF ═══════════════════════ */
+@media print {
+  /* Força um layout claro e legível no PDF, independente do tema usado na tela */
+  :root, [data-theme="dark"] {
+    --bg:        #ffffff;
+    --bg-card:   #ffffff;
+    --bg-card-s: #ffffff;
+    --text:      #0f172a;
+    --text-sub:  #475569;
+    --border:    #cbd5e1;
+    --accent:    #dc2626;
+    --bar-fill:  #dc2626;
+    --bar-bg:    #e2e8f0;
+    --kpi-bg:    #ffffff;
+    --kpi-border:#cbd5e1;
+    --turno1:    #fca5a5;
+    --turno2:    #dc2626;
+    --turno3:    #7f1d1d;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body { background: #ffffff !important; }
+  .wrapper { max-width: 100% !important; padding: 8px !important; }
+
+  /* Esconde tudo que só faz sentido interagindo na tela */
+  .header-actions button,
+  .theme-btn,
+  #modalBusca,
+  .tooltip,
+  .modal-overlay,
+  .dd-panel,
+  .btn-reset {
+    display: none !important;
+  }
+
+  /* Nunca corta um card, KPI ou linha de filtro no meio, entre uma página e outra */
+  .card,
+  .kpi-card,
+  .filter-bar,
+  .filter-group {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .card, .filter-bar {
+    box-shadow: none !important;
+    border: 1px solid var(--border) !important;
+    backdrop-filter: none !important;
+  }
+
+  .kpi-highlight {
+    border: 2px solid var(--accent) !important;
+    background: var(--accent-light) !important;
+  }
+
+  /* Evita que um gráfico comece bem no fim de uma página */
+  .grid-3, .grid-2 {
+    break-inside: avoid;
+  }
+}
 </style>
 </head>
 <body>
@@ -599,8 +663,6 @@ body{
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ═══════════════════════ DATA & CATEGORIZATION ═══════════════════════
 // ═══════════════════════ CONEXÃO COM A NUVEM (Google Sheets) ═══════════════════════
@@ -832,74 +894,12 @@ function resetarTudo() {
 }
 
 // ═══════════════════════ EXPORTAR DASHBOARD EM PDF ═══════════════════════
-// Captura o dashboard exatamente como está na tela (com os filtros atuais)
-// e gera um PDF, como se fosse uma foto — não recalcula nem altera nada.
-async function exportarDashboardPDF() {
-  const btn = document.getElementById('btnExportarPDF');
-  const textoOriginal = btn.innerHTML;
-
-  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-    alert('Bibliotecas de exportação não carregaram (é necessária conexão com a internet).');
-    return;
-  }
-
-  // Fecha qualquer modal aberto antes de capturar, pra não sair na foto
+// Usa a impressão nativa do navegador (janela "Salvar como PDF") em vez de
+// fotografar a tela — o próprio navegador evita cortar cards no meio,
+// respeitando as regras de impressão definidas no CSS (@media print).
+function exportarDashboardPDF() {
   fecharModal();
-
-  btn.disabled = true;
-  btn.innerHTML = '⏳ Gerando PDF...';
-
-  try {
-    const elemento = document.querySelector('.wrapper');
-    const canvas = await html2canvas(elemento, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: getComputedStyle(document.body).backgroundColor
-    });
-
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    const imgData = canvas.toDataURL('image/png');
-
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position -= pageHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    const ini = document.getElementById('filtroInicio').value || 'inicio';
-    const fim = document.getElementById('filtroFim').value || 'fim';
-
-    // Baixa o arquivo diretamente via blob (em vez de pdf.save(), que em
-    // alguns navegadores/extensões tenta abrir uma pré-visualização e acaba
-    // sendo bloqueada) — força o download sem tentar exibir nada.
-    const pdfBlob = pdf.output('blob');
-    const url = URL.createObjectURL(pdfBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `dashboard_producao_${ini}_a_${fim}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  } catch (err) {
-    alert('Erro ao gerar o PDF: ' + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = textoOriginal;
-  }
+  window.print();
 }
 
 // ═══════════════════════ CARREGAR / SINCRONIZAR COM A NUVEM ═══════════════════════
