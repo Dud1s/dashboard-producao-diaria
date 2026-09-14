@@ -521,6 +521,7 @@ body{
     </div>
 
     <button class="btn-reset" onclick="resetarTudo()">Limpar Filtros</button>
+    <button class="btn-reset" id="btnExportarPDF" onclick="exportarDashboardPDF()" style="border-color:var(--accent);color:var(--accent)">📄 Exportar PDF</button>
   </div>
 
   <!-- KPIs -->
@@ -598,6 +599,8 @@ body{
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ═══════════════════════ DATA & CATEGORIZATION ═══════════════════════
 // ═══════════════════════ CONEXÃO COM A NUVEM (Google Sheets) ═══════════════════════
@@ -826,6 +829,77 @@ function resetarTudo() {
   refugoFiltrado = [...REFUGO_BRUTOS];
   paradasFiltrado = [...PARADAS_BRUTOS];
   renderAll();
+}
+
+// ═══════════════════════ EXPORTAR DASHBOARD EM PDF ═══════════════════════
+// Captura o dashboard exatamente como está na tela (com os filtros atuais)
+// e gera um PDF, como se fosse uma foto — não recalcula nem altera nada.
+async function exportarDashboardPDF() {
+  const btn = document.getElementById('btnExportarPDF');
+  const textoOriginal = btn.innerHTML;
+
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    alert('Bibliotecas de exportação não carregaram (é necessária conexão com a internet).');
+    return;
+  }
+
+  // Fecha qualquer modal aberto antes de capturar, pra não sair na foto
+  fecharModal();
+
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Gerando PDF...';
+
+  try {
+    const elemento = document.querySelector('.wrapper');
+    const canvas = await html2canvas(elemento, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: getComputedStyle(document.body).backgroundColor
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const imgData = canvas.toDataURL('image/png');
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position -= pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    const ini = document.getElementById('filtroInicio').value || 'inicio';
+    const fim = document.getElementById('filtroFim').value || 'fim';
+
+    // Baixa o arquivo diretamente via blob (em vez de pdf.save(), que em
+    // alguns navegadores/extensões tenta abrir uma pré-visualização e acaba
+    // sendo bloqueada) — força o download sem tentar exibir nada.
+    const pdfBlob = pdf.output('blob');
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dashboard_producao_${ini}_a_${fim}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (err) {
+    alert('Erro ao gerar o PDF: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = textoOriginal;
+  }
 }
 
 // ═══════════════════════ CARREGAR / SINCRONIZAR COM A NUVEM ═══════════════════════
@@ -2068,12 +2142,14 @@ function contarDiasNoPeriodo() {
 // máquinas (categoria inteira), não de uma máquina isolada.
 // Tempo disponível do grupo = 7,33h (440min) × 3 turnos × dias do período ×
 // número de máquinas do grupo.
-function calcularOEEGrupo(categoria, maquinasDoGrupo, diasNoPeriodo) {
-  const numMaquinas = maquinasDoGrupo.length;
-  const tempoDisponivel = TEMPO_PLANEJADO_POR_TURNO_MIN * 3 * diasNoPeriodo * numMaquinas;
+// Calcula Disponibilidade, Performance, Qualidade e OEE de UMA máquina
+// individual. Tempo disponível = 7,33h (440min) × 3 turnos × dias do
+// período — sem multiplicar por número de máquinas (cada linha é 1 máquina).
+function calcularOEEMaquina(maquina, diasNoPeriodo) {
+  const tempoDisponivel = TEMPO_PLANEJADO_POR_TURNO_MIN * 3 * diasNoPeriodo;
 
   const tempoPerdido = paradasFiltrado
-    .filter(r => maquinasDoGrupo.includes(r.CT))
+    .filter(r => r.CT === maquina)
     .filter(r => String(r['DESCRICAO DA PARADA'] || '').trim().toUpperCase() !== DESCRICAO_PARADA_PLANEJADA)
     .reduce((s, r) => s + duracaoMinutosParada(r), 0);
 
@@ -2081,11 +2157,11 @@ function calcularOEEGrupo(categoria, maquinasDoGrupo, diasNoPeriodo) {
   const disponibilidade = tempoDisponivel > 0 ? (tempoRodando / tempoDisponivel) : 0;
 
   const producaoTotal = dadosFiltrados
-    .filter(r => maquinasDoGrupo.includes(r.CT))
+    .filter(r => r.CT === maquina)
     .reduce((s, r) => s + (Number(r['QUANTIDADE PRODUZIDA']) || 0), 0);
 
   const refugoTotal = refugoFiltrado
-    .filter(r => maquinasDoGrupo.includes(r.SETOR))
+    .filter(r => r.SETOR === maquina)
     .reduce((s, r) => s + (Number(r['QUANTIDADE']) || 0), 0);
 
   const tempoRodandoHoras = tempoRodando / 60;
@@ -2093,7 +2169,7 @@ function calcularOEEGrupo(categoria, maquinasDoGrupo, diasNoPeriodo) {
   const qualidade = producaoTotal > 0 ? Math.max((producaoTotal - refugoTotal) / producaoTotal, 0) : 1;
   const oee = disponibilidade * performance * qualidade;
 
-  return { categoria, numMaquinas, tempoDisponivel, tempoRodando, producaoTotal, refugoTotal, disponibilidade, performance, qualidade, oee };
+  return { maquina, tempoDisponivel, tempoRodando, producaoTotal, refugoTotal, disponibilidade, performance, qualidade, oee };
 }
 
 function renderTabelaOEE() {
@@ -2112,21 +2188,10 @@ function renderTabelaOEE() {
     return;
   }
 
-  const resultados = CATEGORIAS_OEE_PERMITIDAS
-    .map(categoria => {
-      const maquinasDoGrupo = maquinasEscopo.filter(m => getInfo(m).cat === categoria);
-      if (maquinasDoGrupo.length === 0) return null;
-      return calcularOEEGrupo(categoria, maquinasDoGrupo, diasNoPeriodo);
-    })
-    .filter(Boolean);
+  const resultados = maquinasEscopo.map(m => calcularOEEMaquina(m, diasNoPeriodo));
 
-  if (!resultados.length) {
-    container.innerHTML = '<div class="no-data">Sem dados com os filtros selecionados</div>';
-    return;
-  }
-
-  // Linha "Fábrica": soma os totais dos grupos e recalcula as razões em
-  // cima da soma (não é média das porcentagens).
+  // Linha "Fábrica": soma os totais de todas as máquinas do escopo e
+  // recalcula as razões em cima da soma (não é média das porcentagens).
   const tempoDisponivelTotal = resultados.reduce((s, r) => s + r.tempoDisponivel, 0);
   const tempoRodandoTotal = resultados.reduce((s, r) => s + r.tempoRodando, 0);
   const producaoTotalFabrica = resultados.reduce((s, r) => s + r.producaoTotal, 0);
@@ -2140,7 +2205,7 @@ function renderTabelaOEE() {
 
   let html = `<table class="rank-table">
     <thead><tr>
-      <th>Grupo</th>
+      <th>Máquina</th>
       <th style="text-align:right">Disponibilidade</th>
       <th style="text-align:right">Performance</th>
       <th style="text-align:right">Qualidade</th>
@@ -2149,7 +2214,7 @@ function renderTabelaOEE() {
 
   resultados.forEach(r => {
     html += `<tr>
-      <td style="font-weight:600">${r.categoria} (${r.numMaquinas} máquinas)</td>
+      <td style="font-weight:600">${r.maquina}</td>
       <td style="text-align:right">${fmtDec(r.disponibilidade * 100, 1)}%</td>
       <td style="text-align:right">${fmtDec(r.performance * 100, 1)}%</td>
       <td style="text-align:right">${fmtDec(r.qualidade * 100, 1)}%</td>
@@ -2174,7 +2239,7 @@ function renderChartMaquinaParada() {
   paradasFiltrado.forEach(r => {
     duracaoPorMaquina[r.CT] = (duracaoPorMaquina[r.CT] || 0) + duracaoMinutosParada(r);
   });
-  const sorted = Object.entries(duracaoPorMaquina).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  const sorted = Object.entries(duracaoPorMaquina).sort((a, b) => b[1] - a[1]).slice(0, 20);
   const data = sorted.map(([k, v]) => ({
     label: k,
     fullLabel: 'Máquina: ' + k,
