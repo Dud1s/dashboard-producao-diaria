@@ -2128,22 +2128,29 @@ const CATEGORIAS_OEE_PERMITIDAS = ['Injetoras Grandes', 'Sopros'];
 // filtro de Turno), aplicando a regra do domingo. Esse número é o mesmo
 // para todas as máquinas do escopo (o calendário não muda por máquina).
 // Conta quantos dias existem no período filtrado (De até Até, inclusive).
+// Conta quantos dias ÚTEIS existem no período filtrado (De até Até,
+// inclusive) — a fábrica funciona de segunda a sábado, então domingo não
+// entra na conta. Isso também torna o indicador "dinâmico": se o período
+// filtrado ainda não terminou (ex: mês atual até hoje), só os dias que já
+// aconteceram de fato entram no cálculo.
 function contarDiasNoPeriodo() {
   const filtroIni = document.getElementById('filtroInicio').value;
   const filtroFim = document.getElementById('filtroFim').value;
   if (!filtroIni || !filtroFim) return 0;
-  const dataIni = new Date(filtroIni + 'T00:00:00Z');
+
+  let diasUteis = 0;
+  let dataAtual = new Date(filtroIni + 'T00:00:00Z');
   const dataFim = new Date(filtroFim + 'T00:00:00Z');
-  const dias = Math.floor((dataFim - dataIni) / 86400000) + 1;
-  return Math.max(dias, 0);
+  while (dataAtual <= dataFim) {
+    const ehDomingo = dataAtual.getUTCDay() === 0;
+    if (!ehDomingo) diasUteis++;
+    dataAtual = new Date(dataAtual.getTime() + 86400000);
+  }
+  return diasUteis;
 }
 
-// Calcula Disponibilidade, Performance, Qualidade e OEE de um GRUPO de
-// máquinas (categoria inteira), não de uma máquina isolada.
-// Tempo disponível do grupo = 7,33h (440min) × 3 turnos × dias do período ×
-// número de máquinas do grupo.
 // Calcula Disponibilidade, Performance, Qualidade e OEE de UMA máquina
-// individual. Tempo disponível = 7,33h (440min) × 3 turnos × dias do
+// individual. Tempo disponível = 7,33h (440min) × 3 turnos × dias úteis do
 // período — sem multiplicar por número de máquinas (cada linha é 1 máquina).
 function calcularOEEMaquina(maquina, diasNoPeriodo) {
   const tempoDisponivel = TEMPO_PLANEJADO_POR_TURNO_MIN * 3 * diasNoPeriodo;
