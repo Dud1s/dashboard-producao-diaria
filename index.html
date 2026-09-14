@@ -290,6 +290,11 @@ body{
 .rank-3{background:var(--accent3);color:#fff}
 .rank-bar-cell{width:40%}
 .rank-bar-bg{height:8px;background:var(--bar-bg);border-radius:4px;overflow:hidden}
+.oee-fabrica-row td{
+  font-weight:700;background:var(--accent-light);border-top:2px solid var(--accent);
+  color:var(--text);
+}
+.oee-fabrica-row:hover td{background:var(--accent-light)}
 .rank-bar-fg{height:100%;border-radius:4px;background:var(--bar-fill);transition:width .5s cubic-bezier(.4,0,.2,1)}
 
 /* ── Responsive ── */
@@ -520,6 +525,12 @@ body{
 
   <!-- KPIs -->
   <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- Indicadores de OEE -->
+  <div class="card">
+    <div class="card-title">Indicadores de OEE — Sopros e Injetoras Grandes</div>
+    <div id="tabelaOEE"></div>
+  </div>
 
   <!-- Main chart: daily/weekly/monthly -->
   <div class="card">
@@ -2024,6 +2035,140 @@ function duracaoMinutosParada(r) {
   return finalMin - inicioMin;
 }
 
+// ═══════════════════════ OEE (máquina por máquina) ═══════════════════════
+// Premissas combinadas com a Duda:
+//  - Cada turno tem 8h (480 min); 40min são refeição planejada (não conta
+//    contra o OEE) -> 440min de tempo planejado por turno.
+//  - Domingo só conta o 3° turno (os outros dois não são planejados).
+//  - Capacidade ideal única: 120 peças/hora, para Sopros e Injetoras Grandes.
+//  - Por enquanto, o OEE só considera Sopros e Injetoras Grandes (não inclui
+//    Injetoras Pequenas, PU, montagem, rebarbação, retrabalho).
+const TEMPO_TURNO_MIN = 480;
+const TEMPO_REFEICAO_MIN = 40;
+const TEMPO_PLANEJADO_POR_TURNO_MIN = TEMPO_TURNO_MIN - TEMPO_REFEICAO_MIN; // 440min
+const CAPACIDADE_IDEAL_PECAS_HORA = 120;
+const DESCRICAO_PARADA_PLANEJADA = 'PARADA PARA REFEIÇÃO';
+const CATEGORIAS_OEE_PERMITIDAS = ['Injetoras Grandes', 'Sopros'];
+
+// Conta quantos turnos são planejados no período/filtro atual (De/Até +
+// filtro de Turno), aplicando a regra do domingo. Esse número é o mesmo
+// para todas as máquinas do escopo (o calendário não muda por máquina).
+// Conta quantos dias existem no período filtrado (De até Até, inclusive).
+function contarDiasNoPeriodo() {
+  const filtroIni = document.getElementById('filtroInicio').value;
+  const filtroFim = document.getElementById('filtroFim').value;
+  if (!filtroIni || !filtroFim) return 0;
+  const dataIni = new Date(filtroIni + 'T00:00:00Z');
+  const dataFim = new Date(filtroFim + 'T00:00:00Z');
+  const dias = Math.floor((dataFim - dataIni) / 86400000) + 1;
+  return Math.max(dias, 0);
+}
+
+// Calcula Disponibilidade, Performance, Qualidade e OEE de um GRUPO de
+// máquinas (categoria inteira), não de uma máquina isolada.
+// Tempo disponível do grupo = 7,33h (440min) × 3 turnos × dias do período ×
+// número de máquinas do grupo.
+function calcularOEEGrupo(categoria, maquinasDoGrupo, diasNoPeriodo) {
+  const numMaquinas = maquinasDoGrupo.length;
+  const tempoDisponivel = TEMPO_PLANEJADO_POR_TURNO_MIN * 3 * diasNoPeriodo * numMaquinas;
+
+  const tempoPerdido = paradasFiltrado
+    .filter(r => maquinasDoGrupo.includes(r.CT))
+    .filter(r => String(r['DESCRICAO DA PARADA'] || '').trim().toUpperCase() !== DESCRICAO_PARADA_PLANEJADA)
+    .reduce((s, r) => s + duracaoMinutosParada(r), 0);
+
+  const tempoRodando = Math.max(tempoDisponivel - tempoPerdido, 0);
+  const disponibilidade = tempoDisponivel > 0 ? (tempoRodando / tempoDisponivel) : 0;
+
+  const producaoTotal = dadosFiltrados
+    .filter(r => maquinasDoGrupo.includes(r.CT))
+    .reduce((s, r) => s + (Number(r['QUANTIDADE PRODUZIDA']) || 0), 0);
+
+  const refugoTotal = refugoFiltrado
+    .filter(r => maquinasDoGrupo.includes(r.SETOR))
+    .reduce((s, r) => s + (Number(r['QUANTIDADE']) || 0), 0);
+
+  const tempoRodandoHoras = tempoRodando / 60;
+  const performance = tempoRodandoHoras > 0 ? (producaoTotal / (tempoRodandoHoras * CAPACIDADE_IDEAL_PECAS_HORA)) : 0;
+  const qualidade = producaoTotal > 0 ? Math.max((producaoTotal - refugoTotal) / producaoTotal, 0) : 1;
+  const oee = disponibilidade * performance * qualidade;
+
+  return { categoria, numMaquinas, tempoDisponivel, tempoRodando, producaoTotal, refugoTotal, disponibilidade, performance, qualidade, oee };
+}
+
+function renderTabelaOEE() {
+  const container = document.getElementById('tabelaOEE');
+
+  const maquinasEscopo = MAQUINAS_ORDENADAS_JS.filter(m => {
+    const info = getInfo(m);
+    return SEL.ddMaquina.has(m) && SEL.ddTipoProduto.has(info.tipo) && SEL.ddCategoria.has(info.cat)
+      && CATEGORIAS_OEE_PERMITIDAS.includes(info.cat);
+  });
+
+  const diasNoPeriodo = contarDiasNoPeriodo();
+
+  if (maquinasEscopo.length === 0 || diasNoPeriodo === 0) {
+    container.innerHTML = '<div class="no-data">Sem dados com os filtros selecionados</div>';
+    return;
+  }
+
+  const resultados = CATEGORIAS_OEE_PERMITIDAS
+    .map(categoria => {
+      const maquinasDoGrupo = maquinasEscopo.filter(m => getInfo(m).cat === categoria);
+      if (maquinasDoGrupo.length === 0) return null;
+      return calcularOEEGrupo(categoria, maquinasDoGrupo, diasNoPeriodo);
+    })
+    .filter(Boolean);
+
+  if (!resultados.length) {
+    container.innerHTML = '<div class="no-data">Sem dados com os filtros selecionados</div>';
+    return;
+  }
+
+  // Linha "Fábrica": soma os totais dos grupos e recalcula as razões em
+  // cima da soma (não é média das porcentagens).
+  const tempoDisponivelTotal = resultados.reduce((s, r) => s + r.tempoDisponivel, 0);
+  const tempoRodandoTotal = resultados.reduce((s, r) => s + r.tempoRodando, 0);
+  const producaoTotalFabrica = resultados.reduce((s, r) => s + r.producaoTotal, 0);
+  const refugoTotalFabrica = resultados.reduce((s, r) => s + r.refugoTotal, 0);
+
+  const disponibilidadeFabrica = tempoDisponivelTotal > 0 ? (tempoRodandoTotal / tempoDisponivelTotal) : 0;
+  const tempoRodandoTotalHoras = tempoRodandoTotal / 60;
+  const performanceFabrica = tempoRodandoTotalHoras > 0 ? (producaoTotalFabrica / (tempoRodandoTotalHoras * CAPACIDADE_IDEAL_PECAS_HORA)) : 0;
+  const qualidadeFabrica = producaoTotalFabrica > 0 ? Math.max((producaoTotalFabrica - refugoTotalFabrica) / producaoTotalFabrica, 0) : 1;
+  const oeeFabrica = disponibilidadeFabrica * performanceFabrica * qualidadeFabrica;
+
+  let html = `<table class="rank-table">
+    <thead><tr>
+      <th>Grupo</th>
+      <th style="text-align:right">Disponibilidade</th>
+      <th style="text-align:right">Performance</th>
+      <th style="text-align:right">Qualidade</th>
+      <th style="text-align:right">OEE</th>
+    </tr></thead><tbody>`;
+
+  resultados.forEach(r => {
+    html += `<tr>
+      <td style="font-weight:600">${r.categoria} (${r.numMaquinas} máquinas)</td>
+      <td style="text-align:right">${fmtDec(r.disponibilidade * 100, 1)}%</td>
+      <td style="text-align:right">${fmtDec(r.performance * 100, 1)}%</td>
+      <td style="text-align:right">${fmtDec(r.qualidade * 100, 1)}%</td>
+      <td style="text-align:right;font-weight:700;color:var(--accent)">${fmtDec(r.oee * 100, 1)}%</td>
+    </tr>`;
+  });
+
+  html += `<tr class="oee-fabrica-row">
+    <td>FÁBRICA (Sopros + Injetoras Grandes)</td>
+    <td style="text-align:right">${fmtDec(disponibilidadeFabrica * 100, 1)}%</td>
+    <td style="text-align:right">${fmtDec(performanceFabrica * 100, 1)}%</td>
+    <td style="text-align:right">${fmtDec(qualidadeFabrica * 100, 1)}%</td>
+    <td style="text-align:right">${fmtDec(oeeFabrica * 100, 1)}%</td>
+  </tr>`;
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
 function renderChartMaquinaParada() {
   const duracaoPorMaquina = {};
   paradasFiltrado.forEach(r => {
@@ -2365,6 +2510,7 @@ function renderChartItensRefugo() {
 // ═══════════════════════ RENDER ALL ═══════════════════════
 function renderAll() {
   renderKPIs();
+  renderTabelaOEE();
   renderChartPeriodo();
   renderChartMaquina();
   renderChartTurno();
